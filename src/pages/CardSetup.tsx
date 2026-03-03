@@ -16,9 +16,8 @@ import CheckIcon from "@mui/icons-material/Check";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { useAuth } from "../hooks/useAuth";
-import { createCard } from "../firebase/firestore";
-import { uploadFreeCellImage } from "../firebase/storage";
-import { updateCardMeta } from "../firebase/firestore";
+import { createCard, updateCardMeta, updateGoals } from "../firebase/firestore";
+import { uploadFreeCellImage, uploadGoalImage } from "../firebase/storage";
 import type { Goal } from "../types";
 
 type LocationState = {
@@ -59,6 +58,9 @@ export const CardSetup = () => {
   const [freeFile, setFreeFile] = useState<File | null>(null);
   const [freePreview, setFreePreview] = useState<string | null>(null);
   const freeFileInputRef = useRef<HTMLInputElement>(null);
+  const [goalFiles, setGoalFiles] = useState<(File | null)[]>(() => Array(goalCount).fill(null));
+  const [goalPreviews, setGoalPreviews] = useState<(string | null)[]>(() => Array(goalCount).fill(null));
+  const goalFileInputRef = useRef<HTMLInputElement>(null);
 
   const isFreeStep = step === 0;
   const isLastStep = step === goalCount;
@@ -81,11 +83,22 @@ export const CardSetup = () => {
     e.target.value = "";
   };
 
+  const handleGoalFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setGoalFiles((prev) => prev.map((f, i) => (i === goalIdx ? file : f)));
+    setGoalPreviews((prev) => prev.map((p, i) => (i === goalIdx ? URL.createObjectURL(file) : p)));
+    e.target.value = "";
+  };
+
   const handleCreate = async () => {
     if (!user || !allFilled) return;
     setSaving(true);
+
+    // Step 1: create the card document — only failure that blocks navigation
+    let cardId: string;
     try {
-      const cardId = await createCard(user.uid, {
+      cardId = await createCard(user.uid, {
         name: cardName,
         gridDim,
         backgroundColor: "#ffffff",
@@ -93,17 +106,47 @@ export const CardSetup = () => {
         freeImageUrl: null,
         goals,
       });
-
-      if (freeFile) {
-        const url = await uploadFreeCellImage(user.uid, cardId, freeFile);
-        await updateCardMeta(user.uid, cardId, { freeImageUrl: url });
-      }
-
-      navigate(`/card/${cardId}`, { replace: true });
     } catch (err) {
       console.error("Failed to create card:", err);
+      alert(`Card creation failed: ${err instanceof Error ? err.message : String(err)}`);
       setSaving(false);
+      return;
     }
+
+    // Step 2: upload images — failures are non-fatal, navigation always happens
+    if (freeFile) {
+      try {
+        const url = await uploadFreeCellImage(user.uid, cardId, freeFile);
+        await updateCardMeta(user.uid, cardId, { freeImageUrl: url });
+      } catch (uploadErr) {
+        console.error("Free cell image upload failed:", uploadErr);
+      }
+    }
+
+    const updatedGoals = [...goals];
+    let anyUploaded = false;
+    for (let i = 0; i < goalFiles.length; i++) {
+      const f = goalFiles[i];
+      if (f) {
+        try {
+          const url = await uploadGoalImage(user.uid, cardId, i, f);
+          updatedGoals[i] = { ...updatedGoals[i], imageUrl: url };
+          anyUploaded = true;
+        } catch (uploadErr) {
+          console.error(`Goal ${i} image upload failed:`, uploadErr);
+        }
+      }
+    }
+    if (anyUploaded) {
+      try {
+        await updateGoals(user.uid, cardId, updatedGoals);
+      } catch (updateErr) {
+        console.error("Failed to save goal image URLs:", updateErr);
+      }
+    }
+
+    // Step 3: navigate — outside ALL try-catch blocks so it can never be swallowed
+    navigate(`/card/${cardId}`, { replace: true });
   };
 
   const canAdvance = isFreeStep || (goal?.title.trim() !== "");
@@ -297,7 +340,43 @@ export const CardSetup = () => {
               </Box>
             </Box>
 
-            <TextField
+            {/* Per-goal image upload */}
+          <input
+            ref={goalFileInputRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={handleGoalFileChange}
+          />
+          {goalPreviews[goalIdx] ? (
+            <Box>
+              <Box
+                component="img"
+                src={goalPreviews[goalIdx]!}
+                sx={{ width: "100%", maxHeight: 160, objectFit: "cover", borderRadius: 2, mb: 1 }}
+              />
+              <Button
+                variant="outlined"
+                size="small"
+                fullWidth
+                onClick={() => goalFileInputRef.current?.click()}
+              >
+                Change photo
+              </Button>
+            </Box>
+          ) : (
+            <Button
+              variant="outlined"
+              size="small"
+              fullWidth
+              onClick={() => goalFileInputRef.current?.click()}
+              sx={{ borderStyle: "dashed", color: "text.secondary" }}
+            >
+              + Add a photo (optional)
+            </Button>
+          )}
+
+          <TextField
               label="Target date"
               type="date"
               value={goal.completeDate

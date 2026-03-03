@@ -60,8 +60,13 @@ export const CardDetail = () => {
 
   const handleImageUpload = async (file: File) => {
     if (!user || !card || selectedGoalIdx === null) return;
-    const url = await uploadGoalImage(user.uid, card.id, selectedGoalIdx, file);
-    await updateGoal(user.uid, card.id, card.goals, selectedGoalIdx, { imageUrl: url });
+    try {
+      const url = await uploadGoalImage(user.uid, card.id, selectedGoalIdx, file);
+      await updateGoal(user.uid, card.id, card.goals, selectedGoalIdx, { imageUrl: url });
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      alert(`Image upload failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
   };
 
   const handleColorChange = async (color: string, gradientKey: string | null) => {

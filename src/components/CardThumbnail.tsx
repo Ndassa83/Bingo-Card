@@ -38,6 +38,7 @@ export const CardThumbnail = ({ card, onClick, onDelete, variant = "grid" }: Car
         background,
         display: "grid",
         gridTemplateColumns: `repeat(${card.gridDim}, 1fr)`,
+        gridTemplateRows: `repeat(${card.gridDim}, 1fr)`,
         gap: 0.25,
         p: 0.5,
         borderRadius: variant === "list" ? "8px 0 0 8px" : 1,
@@ -189,6 +190,7 @@ export const CardThumbnail = ({ card, onClick, onDelete, variant = "grid" }: Car
             background,
             display: "grid",
             gridTemplateColumns: `repeat(${card.gridDim}, 1fr)`,
+            gridTemplateRows: `repeat(${card.gridDim}, 1fr)`,
             gap: 0.5,
             p: 1,
           }}
