@@ -19,6 +19,7 @@ export type CardData = {
   gridDim: 3 | 4 | 5 | 6;
   backgroundColor: string; // hex
   gradientKey: string | null;
+  freeImageUrl: string | null;
   shareId: string | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;

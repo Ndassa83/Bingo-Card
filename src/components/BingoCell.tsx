@@ -10,6 +10,7 @@ type BingoCellProps = {
   inBingo: boolean;
   lagStatus?: LagStatus;
   fontSize?: string;
+  freeImageUrl?: string | null;
   onClick: () => void;
 };
 
@@ -19,6 +20,7 @@ export const BingoCell = ({
   inBingo,
   lagStatus,
   fontSize = "0.75rem",
+  freeImageUrl,
   onClick,
 }: BingoCellProps) => {
   const isFree = goal === null;
@@ -101,9 +103,26 @@ export const BingoCell = ({
       )}
 
       {isFree ? (
-        <Typography sx={{ fontSize, fontWeight: 800, color: "text.secondary", letterSpacing: 1 }}>
-          FREE
-        </Typography>
+        <>
+          {freeImageUrl && (
+            <Box
+              component="img"
+              src={freeImageUrl}
+              sx={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                opacity: 0.75,
+                borderRadius: 1,
+              }}
+            />
+          )}
+          <Typography sx={{ position: "relative", fontSize, fontWeight: 800, color: freeImageUrl ? "white" : "text.secondary", letterSpacing: 1, textShadow: freeImageUrl ? "0 1px 3px rgba(0,0,0,0.5)" : "none" }}>
+            FREE
+          </Typography>
+        </>
       ) : (
         <>
           {/* Image thumbnail */}

@@ -20,6 +20,16 @@ export const uploadGoalImage = async (
   return getDownloadURL(storageRef);
 };
 
+export const uploadFreeCellImage = async (
+  userId: string,
+  cardId: string,
+  file: File
+): Promise<string> => {
+  const storageRef = ref(storage, `users/${userId}/cards/${cardId}/free_cell`);
+  await uploadBytes(storageRef, file);
+  return getDownloadURL(storageRef);
+};
+
 export const deleteGoalImage = async (
   userId: string,
   cardId: string,

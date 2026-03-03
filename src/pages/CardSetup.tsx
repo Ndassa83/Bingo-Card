@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -17,6 +17,8 @@ import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import { useAuth } from "../hooks/useAuth";
 import { createCard } from "../firebase/firestore";
+import { uploadFreeCellImage } from "../firebase/storage";
+import { updateCardMeta } from "../firebase/firestore";
 import type { Goal } from "../types";
 
 type LocationState = {
@@ -51,19 +53,33 @@ export const CardSetup = () => {
   const goalCount = GOAL_COUNT[gridDim];
 
   const [goals, setGoals] = useState<Goal[]>(() => makeGoals(goalCount));
-  const [current, setCurrent] = useState(0);
+  // step 0 = FREE cell, steps 1..goalCount = goals
+  const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [freeFile, setFreeFile] = useState<File | null>(null);
+  const [freePreview, setFreePreview] = useState<string | null>(null);
+  const freeFileInputRef = useRef<HTMLInputElement>(null);
 
-  const goal = goals[current];
+  const isFreeStep = step === 0;
+  const isLastStep = step === goalCount;
+  const goalIdx = step - 1; // 0-based goal index when on a goal step
+  const goal = goals[goalIdx];
 
   const update = <K extends keyof Goal>(field: K, value: Goal[K]) => {
     setGoals((prev) =>
-      prev.map((g, i) => (i === current ? { ...g, [field]: value } : g))
+      prev.map((g, i) => (i === goalIdx ? { ...g, [field]: value } : g))
     );
   };
 
   const allFilled = goals.every((g) => g.title.trim() !== "");
-  const isLastStep = current === goalCount - 1;
+
+  const handleFreeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFreeFile(file);
+    setFreePreview(URL.createObjectURL(file));
+    e.target.value = "";
+  };
 
   const handleCreate = async () => {
     if (!user || !allFilled) return;
@@ -74,14 +90,23 @@ export const CardSetup = () => {
         gridDim,
         backgroundColor: "#ffffff",
         gradientKey: "sunset",
+        freeImageUrl: null,
         goals,
       });
+
+      if (freeFile) {
+        const url = await uploadFreeCellImage(user.uid, cardId, freeFile);
+        await updateCardMeta(user.uid, cardId, { freeImageUrl: url });
+      }
+
       navigate(`/card/${cardId}`, { replace: true });
     } catch (err) {
       console.error("Failed to create card:", err);
       setSaving(false);
     }
   };
+
+  const canAdvance = isFreeStep || (goal?.title.trim() !== "");
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#fafafa" }}>
@@ -113,10 +138,10 @@ export const CardSetup = () => {
         </Typography>
       </Box>
 
-      {/* Progress */}
+      {/* Progress bar — only counts goal steps */}
       <LinearProgress
         variant="determinate"
-        value={((current + 1) / goalCount) * 100}
+        value={isFreeStep ? 0 : (goalIdx / goalCount) * 100}
         sx={{
           height: 4,
           "& .MuiLinearProgress-bar": {
@@ -136,106 +161,177 @@ export const CardSetup = () => {
           gap: 3,
         }}
       >
-        <Box>
-          <Typography variant="caption" color="text.secondary" fontWeight={600}>
-            GOAL {current + 1} OF {goalCount}
-          </Typography>
-          <Typography variant="h5" fontWeight={800} sx={{ mt: 0.5 }}>
-            What's goal #{current + 1}?
-          </Typography>
-        </Box>
+        {/* ── FREE cell step ── */}
+        {isFreeStep ? (
+          <>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                FREE CELL
+              </Typography>
+              <Typography variant="h5" fontWeight={800} sx={{ mt: 0.5 }}>
+                Add an image to your center FREE cell
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                Optional — you can skip this step.
+              </Typography>
+            </Box>
 
-        <TextField
-          label="Goal title"
-          placeholder="e.g. Run a 5K"
-          value={goal.title}
-          onChange={(e) => update("title", e.target.value)}
-          fullWidth
-          autoFocus
-          required
-          error={goal.title.trim() === "" && current > 0}
-        />
+            <input
+              ref={freeFileInputRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={handleFreeFileChange}
+            />
 
-        <TextField
-          label="Details (optional)"
-          placeholder="Any extra context or notes"
-          value={goal.description}
-          onChange={(e) => update("description", e.target.value)}
-          fullWidth
-          multiline
-          rows={2}
-        />
+            {freePreview ? (
+              <Box>
+                <Box
+                  component="img"
+                  src={freePreview}
+                  sx={{
+                    width: "100%",
+                    maxHeight: 220,
+                    objectFit: "cover",
+                    borderRadius: 3,
+                    mb: 1.5,
+                  }}
+                />
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  onClick={() => freeFileInputRef.current?.click()}
+                >
+                  Change image
+                </Button>
+              </Box>
+            ) : (
+              <Button
+                variant="outlined"
+                fullWidth
+                onClick={() => freeFileInputRef.current?.click()}
+                sx={{ borderStyle: "dashed", py: 5, color: "text.secondary", fontSize: "1rem" }}
+              >
+                + Add a photo
+              </Button>
+            )}
+          </>
+        ) : (
+          /* ── Goal step ── */
+          <>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                GOAL {goalIdx + 1} OF {goalCount}
+              </Typography>
+              <Typography variant="h5" fontWeight={800} sx={{ mt: 0.5 }}>
+                What's goal #{goalIdx + 1}?
+              </Typography>
+            </Box>
 
-        {/* Count — slider + increment buttons */}
-        <Box>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            How many times? <strong>{goal.finalCount === 1 ? "Once" : `${goal.finalCount}×`}</strong>
-          </Typography>
-          <Slider
-            value={goal.finalCount}
-            onChange={(_, v) => update("finalCount", v as number)}
-            min={1}
-            max={365}
-            valueLabelDisplay="auto"
-            sx={{
-              "& .MuiSlider-thumb": { background: "#f5576c" },
-              "& .MuiSlider-track": {
-                background: "linear-gradient(90deg, #f093fb, #f5576c)",
-                border: "none",
-              },
-            }}
-          />
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1, mt: 1 }}>
-            <IconButton
-              size="small"
-              onClick={() => update("finalCount", Math.max(1, goal.finalCount - 1))}
-              sx={{ border: "1px solid", borderColor: "grey.300" }}
-            >
-              <RemoveIcon fontSize="small" />
-            </IconButton>
-            <Typography sx={{ minWidth: 52, textAlign: "center", fontWeight: 600 }}>
-              {goal.finalCount === 1 ? "Once" : `${goal.finalCount}×`}
-            </Typography>
-            <IconButton
-              size="small"
-              onClick={() => update("finalCount", Math.min(365, goal.finalCount + 1))}
-              sx={{ border: "1px solid", borderColor: "grey.300" }}
-            >
-              <AddIcon fontSize="small" />
-            </IconButton>
-          </Box>
-        </Box>
+            <TextField
+              label="Goal title"
+              placeholder="e.g. Run a 5K"
+              value={goal.title}
+              onChange={(e) => update("title", e.target.value)}
+              fullWidth
+              autoFocus
+              required
+              error={goal.title.trim() === "" && goalIdx > 0}
+            />
 
-        <TextField
-          label="Target date"
-          type="date"
-          value={goal.completeDate
-            .split("/")
-            .reduce((_, __, _i, arr) => `${arr[2]}-${arr[0].padStart(2, "0")}-${arr[1].padStart(2, "0")}`, "")}
-          onChange={(e) => {
-            const [y, m, d] = e.target.value.split("-");
-            if (y && m && d) update("completeDate", `${m}/${d}/${y}`);
-          }}
-          fullWidth
-          InputLabelProps={{ shrink: true }}
-        />
+            <TextField
+              label="Details (optional)"
+              placeholder="Any extra context or notes"
+              value={goal.description}
+              onChange={(e) => update("description", e.target.value)}
+              fullWidth
+              multiline
+              rows={2}
+            />
+
+            <Box>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                How many times?{" "}
+                <strong>{goal.finalCount === 1 ? "Once" : `${goal.finalCount}×`}</strong>
+              </Typography>
+              <Slider
+                value={goal.finalCount}
+                onChange={(_, v) => update("finalCount", v as number)}
+                min={1}
+                max={365}
+                valueLabelDisplay="auto"
+                sx={{
+                  "& .MuiSlider-thumb": { background: "#f5576c" },
+                  "& .MuiSlider-track": {
+                    background: "linear-gradient(90deg, #f093fb, #f5576c)",
+                    border: "none",
+                  },
+                }}
+              />
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 1,
+                  mt: 1,
+                }}
+              >
+                <IconButton
+                  size="small"
+                  onClick={() => update("finalCount", Math.max(1, goal.finalCount - 1))}
+                  sx={{ border: "1px solid", borderColor: "grey.300" }}
+                >
+                  <RemoveIcon fontSize="small" />
+                </IconButton>
+                <Typography sx={{ minWidth: 52, textAlign: "center", fontWeight: 600 }}>
+                  {goal.finalCount === 1 ? "Once" : `${goal.finalCount}×`}
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => update("finalCount", Math.min(365, goal.finalCount + 1))}
+                  sx={{ border: "1px solid", borderColor: "grey.300" }}
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            </Box>
+
+            <TextField
+              label="Target date"
+              type="date"
+              value={goal.completeDate
+                .split("/")
+                .reduce(
+                  (_, __, _i, arr) =>
+                    `${arr[2]}-${arr[0].padStart(2, "0")}-${arr[1].padStart(2, "0")}`,
+                  ""
+                )}
+              onChange={(e) => {
+                const [y, m, d] = e.target.value.split("-");
+                if (y && m && d) update("completeDate", `${m}/${d}/${y}`);
+              }}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
+          </>
+        )}
 
         {/* Navigation */}
         <MobileStepper
           variant="dots"
-          steps={goalCount}
+          steps={goalCount + 1}
           position="static"
-          activeStep={current}
+          activeStep={step}
           sx={{ bgcolor: "transparent", justifyContent: "center" }}
           nextButton={
             isLastStep ? (
-              // Empty spacer to keep dots centered on last step
               <Box sx={{ width: 64 }} />
             ) : (
               <Button
                 size="small"
-                onClick={() => setCurrent((p) => p + 1)}
-                disabled={!goal.title.trim()}
+                onClick={() => setStep((p) => p + 1)}
+                disabled={!canAdvance}
                 endIcon={<ArrowForwardIcon />}
               >
                 Next
@@ -245,8 +341,7 @@ export const CardSetup = () => {
           backButton={
             <Button
               size="small"
-              onClick={() => setCurrent((p) => p - 1)}
-              disabled={current === 0}
+              onClick={() => (step === 0 ? navigate("/") : setStep((p) => p - 1))}
               startIcon={<ArrowBackIcon />}
             >
               Back
@@ -254,7 +349,7 @@ export const CardSetup = () => {
           }
         />
 
-        {/* Create button — only shown on last step, full-width below dots */}
+        {/* Create button — full-width below dots on last step */}
         {isLastStep && (
           <Button
             variant="contained"

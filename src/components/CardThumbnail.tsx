@@ -20,6 +20,15 @@ export const CardThumbnail = ({ card, onClick, onDelete, variant = "grid" }: Car
   const total = card.goals.length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
+  // Build the full grid with FREE cell at center
+  const gridTotal = card.gridDim * card.gridDim;
+  const freeIdx = Math.floor(card.gridDim / 2) * card.gridDim + Math.floor(card.gridDim / 2);
+  let gi = 0;
+  const gridCells = Array.from({ length: gridTotal }, (_, i) => {
+    if (i === freeIdx) return { isFree: true, goal: null as (typeof card.goals)[0] | null };
+    return { isFree: false, goal: card.goals[gi++] ?? null };
+  });
+
   const miniGrid = (size: number) => (
     <Box
       sx={{
@@ -34,22 +43,32 @@ export const CardThumbnail = ({ card, onClick, onDelete, variant = "grid" }: Car
         borderRadius: variant === "list" ? "8px 0 0 8px" : 1,
       }}
     >
-      {card.goals.slice(0, card.gridDim * card.gridDim - 1).map((goal, i) => (
+      {gridCells.map((cell, i) => (
         <Box
           key={i}
           sx={{
             borderRadius: 0.25,
-            bgcolor: goal.completed ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.25)",
+            bgcolor: cell.isFree
+              ? "rgba(255,255,255,0.9)"
+              : cell.goal?.completed
+              ? "rgba(255,255,255,0.8)"
+              : "rgba(255,255,255,0.25)",
             overflow: "hidden",
           }}
         >
-          {goal.imageUrl && (
+          {cell.isFree && card.freeImageUrl ? (
             <Box
               component="img"
-              src={goal.imageUrl}
+              src={card.freeImageUrl}
               sx={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
-          )}
+          ) : !cell.isFree && cell.goal?.imageUrl ? (
+            <Box
+              component="img"
+              src={cell.goal.imageUrl}
+              sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : null}
         </Box>
       ))}
     </Box>
@@ -174,12 +193,14 @@ export const CardThumbnail = ({ card, onClick, onDelete, variant = "grid" }: Car
             p: 1,
           }}
         >
-          {card.goals.slice(0, card.gridDim * card.gridDim - 1).map((goal, i) => (
+          {gridCells.map((cell, i) => (
             <Box
               key={i}
               sx={{
                 borderRadius: 0.5,
-                bgcolor: goal.completed
+                bgcolor: cell.isFree
+                  ? "rgba(255,255,255,0.9)"
+                  : cell.goal?.completed
                   ? "rgba(255,255,255,0.7)"
                   : "rgba(255,255,255,0.25)",
                 display: "flex",
@@ -188,13 +209,19 @@ export const CardThumbnail = ({ card, onClick, onDelete, variant = "grid" }: Car
                 overflow: "hidden",
               }}
             >
-              {goal.imageUrl && (
+              {cell.isFree && card.freeImageUrl ? (
                 <Box
                   component="img"
-                  src={goal.imageUrl}
+                  src={card.freeImageUrl}
                   sx={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
-              )}
+              ) : !cell.isFree && cell.goal?.imageUrl ? (
+                <Box
+                  component="img"
+                  src={cell.goal.imageUrl}
+                  sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : null}
             </Box>
           ))}
         </Box>

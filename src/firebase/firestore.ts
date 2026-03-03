@@ -31,6 +31,7 @@ type NewCardInput = {
   gridDim: 3 | 4 | 5 | 6;
   backgroundColor: string;
   gradientKey: string | null;
+  freeImageUrl: string | null;
   goals: Goal[];
 };
 
@@ -50,7 +51,7 @@ export const createCard = async (
 export const updateCardMeta = async (
   userId: string,
   cardId: string,
-  data: Partial<Pick<CardData, "name" | "backgroundColor" | "gradientKey">>
+  data: Partial<Pick<CardData, "name" | "backgroundColor" | "gradientKey" | "freeImageUrl">>
 ) => {
   await updateDoc(doc(db, "users", userId, "cards", cardId), {
     ...data,

@@ -97,6 +97,7 @@ export const BingoCard = ({ card, marked, onCellClick }: BingoCardProps) => {
                   : undefined
               }
               fontSize={fontSize}
+              freeImageUrl={cell === null ? (card.freeImageUrl ?? null) : undefined}
               onClick={() => onCellClick(goalIdx)}
             />
           );
