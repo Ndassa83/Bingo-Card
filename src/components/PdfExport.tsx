@@ -98,7 +98,7 @@ export const exportReportPdf = (card: CardData): void => {
       const barW = 80;
       const barH = 3;
       const fillW = (goal.curCount / goal.finalCount) * barW;
-      pdf.setFillColor(230);
+      pdf.setFillColor(230, 230, 230);
       pdf.roundedRect(margin + 4, y, barW, barH, 1, 1, "F");
       pdf.setFillColor(245, 87, 108);
       if (fillW > 0) pdf.roundedRect(margin + 4, y, fillW, barH, 1, 1, "F");
