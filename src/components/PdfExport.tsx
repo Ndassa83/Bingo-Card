@@ -33,13 +33,14 @@ export const exportReportPdf = (card: CardData): void => {
   // Title
   pdf.setFontSize(22);
   pdf.setFont("helvetica", "bold");
+  pdf.setTextColor(0, 0, 0);
   pdf.text(card.name, margin, y);
   y += 10;
 
   // Subtitle
   pdf.setFontSize(11);
   pdf.setFont("helvetica", "normal");
-  pdf.setTextColor(120);
+  pdf.setTextColor(120, 120, 120);
   const completed = card.goals.filter((g) => g.completed).length;
   pdf.text(
     `${card.gridDim}×${card.gridDim} card · ${completed}/${card.goals.length} goals completed · Generated ${new Date().toLocaleDateString()}`,
@@ -49,11 +50,11 @@ export const exportReportPdf = (card: CardData): void => {
   y += 8;
 
   // Divider
-  pdf.setDrawColor(220);
+  pdf.setDrawColor(220, 220, 220);
   pdf.line(margin, y, pageW - margin, y);
   y += 8;
 
-  pdf.setTextColor(0);
+  pdf.setTextColor(0, 0, 0);
 
   card.goals.forEach((goal, i) => {
     // Page break
@@ -72,25 +73,26 @@ export const exportReportPdf = (card: CardData): void => {
     // Goal title
     pdf.setFontSize(12);
     pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(0, 0, 0);
     pdf.text(`${i + 1}. ${goal.title || "(untitled)"}`, margin, y);
 
-    // Status badge
+    // Status
     pdf.setFontSize(9);
     pdf.setFont("helvetica", "normal");
-    pdf.setTextColor(goal.completed ? 40 : 120);
+    pdf.setTextColor(goal.completed ? 40 : 120, goal.completed ? 40 : 120, goal.completed ? 40 : 120);
     pdf.text(pct, pageW - margin, y, { align: "right" });
-    pdf.setTextColor(0);
+    pdf.setTextColor(0, 0, 0);
     y += 5;
 
     // Description
     if (goal.description) {
       pdf.setFontSize(9);
       pdf.setFont("helvetica", "normal");
-      pdf.setTextColor(100);
+      pdf.setTextColor(100, 100, 100);
       const lines = pdf.splitTextToSize(goal.description, col);
       pdf.text(lines, margin + 4, y);
       y += lines.length * 4 + 2;
-      pdf.setTextColor(0);
+      pdf.setTextColor(0, 0, 0);
     }
 
     // Progress bar
@@ -107,13 +109,13 @@ export const exportReportPdf = (card: CardData): void => {
 
     // Target date
     pdf.setFontSize(8);
-    pdf.setTextColor(150);
+    pdf.setTextColor(150, 150, 150);
     pdf.text(`Target: ${goal.completeDate}`, margin + 4, y);
-    pdf.setTextColor(0);
+    pdf.setTextColor(0, 0, 0);
     y += 7;
 
     // Row divider
-    pdf.setDrawColor(240);
+    pdf.setDrawColor(240, 240, 240);
     pdf.line(margin, y, pageW - margin, y);
     y += 5;
   });
