@@ -19,11 +19,18 @@ export const useCards = (userId: string | null) => {
       orderBy("createdAt", "desc")
     );
 
-    const unsubscribe = onSnapshot(q, (snap) => {
-      const result = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as CardData[];
-      setCards(result);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snap) => {
+        const result = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as CardData[];
+        setCards(result);
+        setLoading(false);
+      },
+      (err) => {
+        console.error("Firestore useCards error:", err.code, err.message);
+        setLoading(false);
+      }
+    );
 
     return unsubscribe;
   }, [userId]);

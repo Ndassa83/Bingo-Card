@@ -19,6 +19,10 @@ export const useCard = (userId: string | null, cardId: string | undefined) => {
       (snap) => {
         setCard(snap.exists() ? ({ id: snap.id, ...snap.data() } as CardData) : null);
         setLoading(false);
+      },
+      (err) => {
+        console.error("Firestore useCard error:", err.code, err.message);
+        setLoading(false);
       }
     );
 
