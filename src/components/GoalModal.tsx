@@ -224,11 +224,32 @@ export const GoalModal = ({
 
             {/* Image */}
             {goal.imageUrl ? (
-              <Box
-                component="img"
-                src={goal.imageUrl}
-                sx={{ width: "100%", maxHeight: 180, objectFit: "cover", borderRadius: 2 }}
-              />
+              <Box>
+                <Box
+                  component="img"
+                  src={goal.imageUrl}
+                  sx={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 2, mb: 1 }}
+                />
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    fullWidth
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Change photo
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    fullWidth
+                    color="error"
+                    onClick={() => onUpdate({ imageUrl: null })}
+                  >
+                    Remove
+                  </Button>
+                </Box>
+              </Box>
             ) : (
               <Button
                 variant="outlined"

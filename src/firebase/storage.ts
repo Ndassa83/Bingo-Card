@@ -1,43 +1,45 @@
-import {
-  ref,
-  uploadBytes,
-  getDownloadURL,
-  deleteObject,
-} from "firebase/storage";
-import { storage } from "./config";
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string;
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string;
 
-export const uploadGoalImage = async (
-  userId: string,
-  cardId: string,
-  goalIndex: number,
-  file: File
-): Promise<string> => {
-  const storageRef = ref(
-    storage,
-    `users/${userId}/cards/${cardId}/goal_${goalIndex}`
+const uploadToCloudinary = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", UPLOAD_PRESET);
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+    { method: "POST", body: formData }
   );
-  await uploadBytes(storageRef, file);
-  return getDownloadURL(storageRef);
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(
+      `Cloudinary upload failed: ${(err as { error?: { message?: string } }).error?.message ?? res.statusText}`
+    );
+  }
+
+  const data = await res.json() as { secure_url: string };
+  // Force square crop via Cloudinary URL transformation
+  return data.secure_url.replace("/upload/", "/upload/c_fill,ar_1:1/");
 };
+
+// Signatures unchanged — callers don't need to be updated
+export const uploadGoalImage = async (
+  _userId: string,
+  _cardId: string,
+  _goalIndex: number,
+  file: File
+): Promise<string> => uploadToCloudinary(file);
 
 export const uploadFreeCellImage = async (
-  userId: string,
-  cardId: string,
+  _userId: string,
+  _cardId: string,
   file: File
-): Promise<string> => {
-  const storageRef = ref(storage, `users/${userId}/cards/${cardId}/free_cell`);
-  await uploadBytes(storageRef, file);
-  return getDownloadURL(storageRef);
-};
+): Promise<string> => uploadToCloudinary(file);
 
+// Cloudinary deletion requires a signed server-side request; no-op for now
 export const deleteGoalImage = async (
-  userId: string,
-  cardId: string,
-  goalIndex: number
-): Promise<void> => {
-  const storageRef = ref(
-    storage,
-    `users/${userId}/cards/${cardId}/goal_${goalIndex}`
-  );
-  await deleteObject(storageRef);
-};
+  _userId: string,
+  _cardId: string,
+  _goalIndex: number
+): Promise<void> => {};
