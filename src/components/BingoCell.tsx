@@ -27,6 +27,11 @@ export const BingoCell = ({
     if (goal?.cellColor) return goal.cellColor;
     if (inBingo) return "#d4edda";
     if (marked) return "#e8f4fd";
+    // Partial left-to-right fill for in-progress multi-count goals
+    if (goal && goal.finalCount > 1 && goal.curCount > 0 && !goal.completed) {
+      const pct = Math.min(100, Math.round((goal.curCount / goal.finalCount) * 100));
+      return `linear-gradient(to right, rgba(76,175,80,0.3) ${pct}%, white ${pct}%)`;
+    }
     return "white";
   })();
 
@@ -49,7 +54,7 @@ export const BingoCell = ({
         justifyContent: "center",
         textAlign: "center",
         p: 0.75,
-        bgcolor: bgColor,
+        background: bgColor,
         border: "2px solid",
         borderColor,
         borderRadius: 1.5,
@@ -112,7 +117,7 @@ export const BingoCell = ({
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
-                opacity: marked ? 0.35 : 0.2,
+                opacity: marked ? 0.8 : 0.6,
                 borderRadius: 1,
               }}
             />

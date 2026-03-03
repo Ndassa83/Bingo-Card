@@ -72,7 +72,7 @@ export const Dashboard = () => {
             WebkitTextFillColor: "transparent",
           }}
         >
-          BingoGoals
+          Resolution Bingo
         </Typography>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           <Avatar
@@ -93,17 +93,15 @@ export const Dashboard = () => {
 
       {/* Main content */}
       <Box sx={{ px: { xs: 2, sm: 4 }, py: 4, maxWidth: 1100, mx: "auto" }}>
-        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 4 }}>
-          <Box>
-            <Typography variant="h4" fontWeight={800}>
-              Your Cards
-            </Typography>
-            <Typography color="text.secondary">
-              {cards.length === 0
-                ? "No cards yet — create your first one!"
-                : `${cards.length} card${cards.length !== 1 ? "s" : ""}`}
-            </Typography>
-          </Box>
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" fontWeight={800}>
+            Your Cards
+          </Typography>
+          <Typography color="text.secondary" sx={{ mb: 2 }}>
+            {cards.length === 0
+              ? "No cards yet — create your first one!"
+              : `${cards.length} card${cards.length !== 1 ? "s" : ""}`}
+          </Typography>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -155,11 +153,12 @@ export const Dashboard = () => {
             </Button>
           </Box>
         ) : (
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
             {cards.map((card) => (
-              <Grid key={card.id} size={{ xs: 12, sm: 6, md: 4 }}>
+              <Grid key={card.id} size={{ xs: 12 }}>
                 <CardThumbnail
                   card={card}
+                  variant="list"
                   onClick={() => navigate(`/card/${card.id}`)}
                   onDelete={() => handleDelete(card.id)}
                 />

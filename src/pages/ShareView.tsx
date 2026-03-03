@@ -92,7 +92,7 @@ export const ShareView = () => {
             WebkitTextFillColor: "transparent",
           }}
         >
-          BingoGoals
+          Resolution Bingo
         </Typography>
         <Typography variant="body2" color="text.secondary">
           Read-only view

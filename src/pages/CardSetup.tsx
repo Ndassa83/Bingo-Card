@@ -3,8 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
-  Checkbox,
-  FormControlLabel,
+  IconButton,
   LinearProgress,
   MobileStepper,
   Slider,
@@ -14,6 +13,8 @@ import {
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import CheckIcon from "@mui/icons-material/Check";
+import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
 import { useAuth } from "../hooks/useAuth";
 import { createCard } from "../firebase/firestore";
 import type { Goal } from "../types";
@@ -34,7 +35,7 @@ const makeGoals = (count: number): Goal[] =>
     completed: false,
     cellColor: null,
     imageUrl: null,
-    reminderActive: false,
+    reminderActive: true,
   }));
 
 const GOAL_COUNT: Record<number, number> = { 3: 8, 4: 15, 5: 24, 6: 35 };
@@ -62,6 +63,7 @@ export const CardSetup = () => {
   };
 
   const allFilled = goals.every((g) => g.title.trim() !== "");
+  const isLastStep = current === goalCount - 1;
 
   const handleCreate = async () => {
     if (!user || !allFilled) return;
@@ -164,6 +166,7 @@ export const CardSetup = () => {
           rows={2}
         />
 
+        {/* Count — slider + increment buttons */}
         <Box>
           <Typography variant="body2" color="text.secondary" gutterBottom>
             How many times? <strong>{goal.finalCount === 1 ? "Once" : `${goal.finalCount}×`}</strong>
@@ -176,9 +179,31 @@ export const CardSetup = () => {
             valueLabelDisplay="auto"
             sx={{
               "& .MuiSlider-thumb": { background: "#f5576c" },
-              "& .MuiSlider-track": { background: "linear-gradient(90deg, #f093fb, #f5576c)", border: "none" },
+              "& .MuiSlider-track": {
+                background: "linear-gradient(90deg, #f093fb, #f5576c)",
+                border: "none",
+              },
             }}
           />
+          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1, mt: 1 }}>
+            <IconButton
+              size="small"
+              onClick={() => update("finalCount", Math.max(1, goal.finalCount - 1))}
+              sx={{ border: "1px solid", borderColor: "grey.300" }}
+            >
+              <RemoveIcon fontSize="small" />
+            </IconButton>
+            <Typography sx={{ minWidth: 52, textAlign: "center", fontWeight: 600 }}>
+              {goal.finalCount === 1 ? "Once" : `${goal.finalCount}×`}
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={() => update("finalCount", Math.min(365, goal.finalCount + 1))}
+              sx={{ border: "1px solid", borderColor: "grey.300" }}
+            >
+              <AddIcon fontSize="small" />
+            </IconButton>
+          </Box>
         </Box>
 
         <TextField
@@ -195,16 +220,6 @@ export const CardSetup = () => {
           InputLabelProps={{ shrink: true }}
         />
 
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={goal.reminderActive}
-              onChange={(e) => update("reminderActive", e.target.checked)}
-            />
-          }
-          label="Remind me about this goal"
-        />
-
         {/* Navigation */}
         <MobileStepper
           variant="dots"
@@ -213,7 +228,10 @@ export const CardSetup = () => {
           activeStep={current}
           sx={{ bgcolor: "transparent", justifyContent: "center" }}
           nextButton={
-            current < goalCount - 1 ? (
+            isLastStep ? (
+              // Empty spacer to keep dots centered on last step
+              <Box sx={{ width: 64 }} />
+            ) : (
               <Button
                 size="small"
                 onClick={() => setCurrent((p) => p + 1)}
@@ -221,20 +239,6 @@ export const CardSetup = () => {
                 endIcon={<ArrowForwardIcon />}
               >
                 Next
-              </Button>
-            ) : (
-              <Button
-                size="small"
-                variant="contained"
-                onClick={handleCreate}
-                disabled={!allFilled || saving}
-                endIcon={<CheckIcon />}
-                sx={{
-                  background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-                  fontWeight: 700,
-                }}
-              >
-                {saving ? "Creating…" : "Create Card"}
               </Button>
             )
           }
@@ -249,6 +253,28 @@ export const CardSetup = () => {
             </Button>
           }
         />
+
+        {/* Create button — only shown on last step, full-width below dots */}
+        {isLastStep && (
+          <Button
+            variant="contained"
+            fullWidth
+            onClick={handleCreate}
+            disabled={!allFilled || saving}
+            startIcon={<CheckIcon />}
+            sx={{
+              py: 1.5,
+              borderRadius: 3,
+              fontWeight: 700,
+              fontSize: "1rem",
+              background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+              boxShadow: "0 4px 14px rgba(240,147,251,0.35)",
+              "&:hover": { background: "linear-gradient(135deg, #e07aef 0%, #e04455 100%)" },
+            }}
+          >
+            {saving ? "Creating…" : "Create My Bingo Card"}
+          </Button>
+        )}
       </Box>
     </Box>
   );

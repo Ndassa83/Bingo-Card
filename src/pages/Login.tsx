@@ -4,13 +4,6 @@ import { Box, Button, Typography, Paper } from "@mui/material";
 import { AuthContext } from "../auth/AuthContext";
 import { signInWithGoogle } from "../firebase/auth";
 
-const GRID_WORDS = [
-  "Run 5K", "Read 12 Books", "Cook Daily", "Meditate",
-  "Learn Guitar", "Drink Water", "Journal", "Save $500",
-  "FREE", "Sleep 8h", "No Sugar", "Walk 10k",
-  "Call Family", "Learn Spanish", "Volunteer", "Stretch",
-];
-
 export const Login = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -31,7 +24,7 @@ export const Login = () => {
     <Box
       sx={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #fda085 100%)",
+        bgcolor: "#f5f5f5",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -39,45 +32,9 @@ export const Login = () => {
         p: 2,
       }}
     >
-      {/* Decorative mini-grid background */}
-      <Box
-        sx={{
-          position: "absolute",
-          inset: 0,
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gridTemplateRows: "repeat(4, 1fr)",
-          gap: 1.5,
-          p: 3,
-          opacity: 0.12,
-          pointerEvents: "none",
-        }}
-      >
-        {GRID_WORDS.map((word, i) => (
-          <Box
-            key={i}
-            sx={{
-              bgcolor: "white",
-              borderRadius: 2,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Typography
-              sx={{ fontSize: "0.65rem", fontWeight: 700, color: "#333", textAlign: "center", px: 0.5 }}
-            >
-              {word}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
-
-      {/* Login card */}
       <Paper
-        elevation={12}
+        elevation={4}
         sx={{
-          position: "relative",
           p: { xs: 4, sm: 6 },
           borderRadius: 4,
           maxWidth: 420,
@@ -89,14 +46,14 @@ export const Login = () => {
           variant="h3"
           fontWeight={900}
           sx={{
-            background: "linear-gradient(135deg, #f093fb, #f5576c)",
+            background: "linear-gradient(135deg, #43e97b, #2e7d32)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             mb: 1,
             letterSpacing: -1,
           }}
         >
-          BingoGoals
+          Resolution Bingo
         </Typography>
 
         <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
@@ -113,11 +70,11 @@ export const Login = () => {
             borderRadius: 3,
             fontSize: "1rem",
             fontWeight: 700,
-            background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-            boxShadow: "0 4px 20px rgba(240, 147, 251, 0.4)",
+            background: "linear-gradient(135deg, #43e97b 0%, #2e7d32 100%)",
+            boxShadow: "0 4px 20px rgba(46,125,50,0.3)",
             "&:hover": {
-              background: "linear-gradient(135deg, #e07aef 0%, #e04455 100%)",
-              boxShadow: "0 6px 24px rgba(240, 147, 251, 0.5)",
+              background: "linear-gradient(135deg, #38d46a 0%, #1b5e20 100%)",
+              boxShadow: "0 6px 24px rgba(46,125,50,0.4)",
             },
           }}
           startIcon={
