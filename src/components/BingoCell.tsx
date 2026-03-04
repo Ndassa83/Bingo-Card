@@ -31,7 +31,10 @@ export const BingoCell = ({
     if (marked) return "#e8f4fd";
     // Partial left-to-right fill for in-progress multi-count goals
     if (goal && goal.finalCount > 1 && goal.curCount > 0 && !goal.completed) {
-      const pct = Math.min(100, Math.round((goal.curCount / goal.finalCount) * 100));
+      const pct = Math.min(
+        100,
+        Math.round((goal.curCount / goal.finalCount) * 100),
+      );
       return `linear-gradient(to right, rgba(76,175,80,0.3) ${pct}%, white ${pct}%)`;
     }
     return "white";
@@ -67,9 +70,14 @@ export const BingoCell = ({
         boxShadow: inBingo
           ? "0 0 0 3px rgba(40,167,69,0.3)"
           : marked
-          ? "0 0 0 3px rgba(33,150,243,0.2)"
-          : "0 1px 4px rgba(0,0,0,0.08)",
-        "&:hover": isFree ? {} : { transform: "scale(1.04)", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" },
+            ? "0 0 0 3px rgba(33,150,243,0.2)"
+            : "0 1px 4px rgba(0,0,0,0.08)",
+        "&:hover": isFree
+          ? {}
+          : {
+              transform: "scale(1.04)",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            },
       }}
     >
       {/* Lag indicator dot */}
@@ -119,7 +127,16 @@ export const BingoCell = ({
               }}
             />
           )}
-          <Typography sx={{ position: "relative", fontSize, fontWeight: 800, color: freeImageUrl ? "white" : "text.secondary", letterSpacing: 1, textShadow: freeImageUrl ? "0 1px 3px rgba(0,0,0,0.5)" : "none" }}>
+          <Typography
+            sx={{
+              position: "relative",
+              fontSize,
+              fontWeight: 800,
+              color: freeImageUrl ? "white" : "text.secondary",
+              letterSpacing: 1,
+              textShadow: freeImageUrl ? "0 1px 3px rgba(0,0,0,0.5)" : "none",
+            }}
+          >
             FREE
           </Typography>
         </>
@@ -146,7 +163,7 @@ export const BingoCell = ({
             sx={{
               position: "relative",
               fontSize,
-              fontWeight: marked ? 700 : 500,
+              fontWeight: marked ? 900 : 700,
               lineHeight: 1.2,
               overflow: "hidden",
               display: "-webkit-box",

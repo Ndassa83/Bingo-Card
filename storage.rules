@@ -1,0 +1,21 @@
+rules_version = '2';
+
+// NOTE: This project currently uses Cloudinary for image storage, not Firebase
+// Storage. These rules are included for completeness in case Firebase Storage
+// is adopted in the future, and to ensure the bucket is not left open by
+// default.
+//
+// If you migrate image uploads back to Firebase Storage, update the rules below
+// to match the path structure: users/{uid}/cards/{cardId}/goal_{index}
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Deny all access by default.
+    // Replace with specific rules if Firebase Storage is used.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+  }
+}

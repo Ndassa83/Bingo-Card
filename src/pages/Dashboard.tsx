@@ -49,7 +49,7 @@ export const Dashboard = () => {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#fafafa" }}>
+    <Box sx={{ minHeight: "100vh" }}>
       {/* Header */}
       <Box
         sx={{
@@ -80,7 +80,11 @@ export const Dashboard = () => {
             alt={user?.displayName ?? "User"}
             sx={{ width: 36, height: 36 }}
           />
-          <Typography variant="body2" fontWeight={600} sx={{ display: { xs: "none", sm: "block" } }}>
+          <Typography
+            variant="body2"
+            fontWeight={600}
+            sx={{ display: { xs: "none", sm: "block" } }}
+          >
             {user?.displayName}
           </Typography>
           <Tooltip title="Sign out">
@@ -111,7 +115,9 @@ export const Dashboard = () => {
               fontWeight: 700,
               background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
               boxShadow: "0 4px 14px rgba(240,147,251,0.35)",
-              "&:hover": { background: "linear-gradient(135deg, #e07aef 0%, #e04455 100%)" },
+              "&:hover": {
+                background: "linear-gradient(135deg, #e07aef 0%, #e04455 100%)",
+              },
             }}
           >
             New Card

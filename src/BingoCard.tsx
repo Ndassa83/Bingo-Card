@@ -33,28 +33,37 @@ function getBingoIndices(marked: boolean[], gridDim: number): Set<number> {
     check(Array.from({ length: gridDim }, (_, r) => r * gridDim + c));
   }
   check(Array.from({ length: gridDim }, (_, i) => i * gridDim + i));
-  check(Array.from({ length: gridDim }, (_, i) => i * gridDim + (gridDim - 1 - i)));
+  check(
+    Array.from({ length: gridDim }, (_, i) => i * gridDim + (gridDim - 1 - i)),
+  );
   return winning;
 }
 
 export const BingoCard = ({ card, marked, onCellClick }: BingoCardProps) => {
   const { gridDim, goals, createdAt } = card;
 
+  const completedCount = goals.filter((g) => g.completed).length;
+  const totalCount = goals.length;
+  const pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
   const cells = useMemo(() => buildCells(goals, gridDim), [goals, gridDim]);
-  const bingoSet = useMemo(() => getBingoIndices(marked, gridDim), [marked, gridDim]);
+  const bingoSet = useMemo(
+    () => getBingoIndices(marked, gridDim),
+    [marked, gridDim],
+  );
   const hasBingo = bingoSet.size > 0;
 
   const fontSize =
-    gridDim >= 5 ? "0.6rem" : gridDim === 4 ? "0.7rem" : "0.8rem";
+    gridDim >= 5 ? "0.5rem" : gridDim === 4 ? "0.6rem" : "0.7rem";
 
   const freeIdx = Math.floor(gridDim / 2) * gridDim + Math.floor(gridDim / 2);
   let goalCounter = 0;
   const cellToGoalIndex: (number | null)[] = cells.map((_, i) =>
-    i === freeIdx ? null : goalCounter++
+    i === freeIdx ? null : goalCounter++,
   );
 
   return (
-    <Box sx={{ p: { xs: 1, sm: 2 } }}>
+    <Box sx={{ p: { xs: 0, sm: 2 } }}>
       {hasBingo && (
         <Typography
           variant="h3"
@@ -79,8 +88,6 @@ export const BingoCard = ({ card, marked, onCellClick }: BingoCardProps) => {
           gridTemplateColumns: `repeat(${gridDim}, 1fr)`,
           gap: 0.75,
           width: "100%",
-          maxWidth: `min(95vw, ${gridDim * 130}px)`,
-          mx: "auto",
         }}
       >
         {cells.map((cell, i) => {
@@ -97,11 +104,36 @@ export const BingoCard = ({ card, marked, onCellClick }: BingoCardProps) => {
                   : undefined
               }
               fontSize={fontSize}
-              freeImageUrl={cell === null ? (card.freeImageUrl ?? null) : undefined}
+              freeImageUrl={
+                cell === null ? (card.freeImageUrl ?? null) : undefined
+              }
               onClick={() => onCellClick(goalIdx)}
             />
           );
         })}
+      </Box>
+
+      {/* Progress stats */}
+      <Box sx={{ mt: 1.5, px: { xs: 0.5, sm: 0 } }}>
+        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+          <Typography variant="caption" fontWeight={600} color="text.secondary">
+            {completedCount} / {totalCount} goals completed
+          </Typography>
+          <Typography variant="caption" fontWeight={700} color="text.secondary">
+            {pct}%
+          </Typography>
+        </Box>
+        <Box sx={{ height: 6, borderRadius: 3, bgcolor: "rgba(0,0,0,0.1)", overflow: "hidden" }}>
+          <Box
+            sx={{
+              height: "100%",
+              width: `${pct}%`,
+              background: "linear-gradient(90deg, #f093fb, #f5576c)",
+              borderRadius: 3,
+              transition: "width 0.4s ease",
+            }}
+          />
+        </Box>
       </Box>
     </Box>
   );

@@ -17,7 +17,11 @@ import ShareIcon from "@mui/icons-material/Share";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import { useAuth } from "../hooks/useAuth";
 import { useCard } from "../hooks/useCard";
-import { updateGoal, updateCardMeta, enableSharing } from "../firebase/firestore";
+import {
+  updateGoal,
+  updateCardMeta,
+  enableSharing,
+} from "../firebase/firestore";
 import { uploadGoalImage } from "../firebase/storage";
 import { BingoCard } from "../BingoCard";
 import { GoalModal } from "../components/GoalModal";
@@ -61,17 +65,32 @@ export const CardDetail = () => {
   const handleImageUpload = async (file: File) => {
     if (!user || !card || selectedGoalIdx === null) return;
     try {
-      const url = await uploadGoalImage(user.uid, card.id, selectedGoalIdx, file);
-      await updateGoal(user.uid, card.id, card.goals, selectedGoalIdx, { imageUrl: url });
+      const url = await uploadGoalImage(
+        user.uid,
+        card.id,
+        selectedGoalIdx,
+        file,
+      );
+      await updateGoal(user.uid, card.id, card.goals, selectedGoalIdx, {
+        imageUrl: url,
+      });
     } catch (err) {
       console.error("Image upload failed:", err);
-      alert(`Image upload failed: ${err instanceof Error ? err.message : String(err)}`);
+      alert(
+        `Image upload failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   };
 
-  const handleColorChange = async (color: string, gradientKey: string | null) => {
+  const handleColorChange = async (
+    color: string,
+    gradientKey: string | null,
+  ) => {
     if (!user || !card) return;
-    await updateCardMeta(user.uid, card.id, { backgroundColor: color, gradientKey });
+    await updateCardMeta(user.uid, card.id, {
+      backgroundColor: color,
+      gradientKey,
+    });
   };
 
   const handleShare = async () => {
@@ -84,17 +103,23 @@ export const CardDetail = () => {
 
   const handlePdfClean = async () => {
     const { exportCardPdf } = await import("../components/PdfExport");
-    if (card) { setPdfDialogOpen(false); await exportCardPdf(card); }
+    if (card) {
+      setPdfDialogOpen(false);
+      await exportCardPdf(card);
+    }
   };
 
   const handlePdfReport = async () => {
     const { exportReportPdf } = await import("../components/PdfExport");
-    if (card) { setPdfDialogOpen(false); exportReportPdf(card); }
+    if (card) {
+      setPdfDialogOpen(false);
+      exportReportPdf(card);
+    }
   };
 
   const background = card
     ? card.gradientKey
-      ? GRADIENTS[card.gradientKey] ?? card.backgroundColor
+      ? (GRADIENTS[card.gradientKey] ?? card.backgroundColor)
       : card.backgroundColor
     : "white";
 
@@ -188,19 +213,34 @@ export const CardDetail = () => {
             maxWidth: `${card.gridDim * 130 + 32}px`,
           }}
         >
-          <BingoCard card={card} marked={marked} onCellClick={handleCellClick} />
+          <BingoCard
+            card={card}
+            marked={marked}
+            onCellClick={handleCellClick}
+          />
         </Box>
       </Box>
 
       {/* PDF choice dialog */}
-      <Dialog open={pdfDialogOpen} onClose={() => setPdfDialogOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog
+        open={pdfDialogOpen}
+        onClose={() => setPdfDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
         <DialogTitle sx={{ fontWeight: 700 }}>Export PDF</DialogTitle>
         <DialogActions sx={{ flexDirection: "column", gap: 1, p: 3, pt: 0 }}>
           <Button fullWidth variant="outlined" onClick={handlePdfClean}>
             Clean Card (grid only)
           </Button>
-          <Button fullWidth variant="contained" onClick={handlePdfReport}
-            sx={{ background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" }}>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handlePdfReport}
+            sx={{
+              background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+            }}
+          >
             Full Progress Report
           </Button>
         </DialogActions>
