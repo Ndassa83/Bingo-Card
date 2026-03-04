@@ -103,12 +103,30 @@ describe("users/{uid}/cards/{cardId}", () => {
     );
   });
 
-  test("other user cannot read someone else's card", async () => {
+  test("other user cannot read an unshared card", async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), "users", "alice", "cards", "card1"), { name: "My Card" });
+      await setDoc(doc(ctx.firestore(), "users", "alice", "cards", "card1"), { name: "My Card", shareId: null });
     });
     await assertFails(
       getDoc(doc(bob().firestore(), "users", "alice", "cards", "card1"))
+    );
+  });
+
+  test("other user can read a shared card (shareId set)", async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), "users", "alice", "cards", "card1"), { name: "My Card", shareId: "share1" });
+    });
+    await assertSucceeds(
+      getDoc(doc(bob().firestore(), "users", "alice", "cards", "card1"))
+    );
+  });
+
+  test("unauthenticated user can read a shared card (shareId set)", async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), "users", "alice", "cards", "card1"), { name: "My Card", shareId: "share1" });
+    });
+    await assertSucceeds(
+      getDoc(doc(anon().firestore(), "users", "alice", "cards", "card1"))
     );
   });
 
