@@ -71,9 +71,7 @@ export const BingoCard = ({ card, marked, onCellClick }: BingoCardProps) => {
           fontWeight={900}
           sx={{
             mb: 2,
-            background: "linear-gradient(135deg, #43e97b, #38f9d7)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
+            color: "#F9A825",
             letterSpacing: 6,
           }}
         >
@@ -128,7 +126,7 @@ export const BingoCard = ({ card, marked, onCellClick }: BingoCardProps) => {
             sx={{
               height: "100%",
               width: `${pct}%`,
-              background: "linear-gradient(90deg, #f093fb, #f5576c)",
+              background: "linear-gradient(90deg, #1565C0, #F9A825)",
               borderRadius: 3,
               transition: "width 0.4s ease",
             }}

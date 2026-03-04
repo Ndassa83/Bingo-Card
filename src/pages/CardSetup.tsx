@@ -188,7 +188,7 @@ export const CardSetup = () => {
         sx={{
           height: 4,
           "& .MuiLinearProgress-bar": {
-            background: "linear-gradient(90deg, #f093fb, #f5576c)",
+            background: "linear-gradient(90deg, #1565C0, #F9A825)",
           },
         }}
       />
@@ -304,11 +304,8 @@ export const CardSetup = () => {
                 max={365}
                 valueLabelDisplay="auto"
                 sx={{
-                  "& .MuiSlider-thumb": { background: "#f5576c" },
-                  "& .MuiSlider-track": {
-                    background: "linear-gradient(90deg, #f093fb, #f5576c)",
-                    border: "none",
-                  },
+                  "& .MuiSlider-thumb": { bgcolor: "#1565C0" },
+                  "& .MuiSlider-track": { bgcolor: "#1565C0", border: "none" },
                 }}
               />
               <Box
@@ -441,9 +438,9 @@ export const CardSetup = () => {
               borderRadius: 3,
               fontWeight: 700,
               fontSize: "1rem",
-              background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-              boxShadow: "0 4px 14px rgba(240,147,251,0.35)",
-              "&:hover": { background: "linear-gradient(135deg, #e07aef 0%, #e04455 100%)" },
+              bgcolor: "#1565C0",
+              boxShadow: "0 4px 14px rgba(21,101,192,0.3)",
+              "&:hover": { bgcolor: "#0D47A1" },
             }}
           >
             {saving ? "Creating…" : "Create My Bingo Card"}

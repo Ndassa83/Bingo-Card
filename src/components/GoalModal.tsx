@@ -204,8 +204,9 @@ export const GoalModal = ({
                 fullWidth
                 onClick={handleEditSave}
                 sx={{
-                  background: "linear-gradient(135deg, #43e97b 0%, #2e7d32 100%)",
+                  bgcolor: "#1565C0",
                   fontWeight: 700,
+                  "&:hover": { bgcolor: "#0D47A1" },
                 }}
               >
                 Save
@@ -279,7 +280,7 @@ export const GoalModal = ({
                     sx={{
                       height: "100%",
                       width: `${pct}%`,
-                      background: "linear-gradient(90deg, #f093fb, #f5576c)",
+                      background: "linear-gradient(90deg, #1565C0, #F9A825)",
                       borderRadius: 4,
                       transition: "width 0.3s ease",
                     }}
@@ -338,7 +339,7 @@ export const GoalModal = ({
                 sx={
                   goal.completed
                     ? {
-                        background: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+                        bgcolor: "#F9A825",
                         fontWeight: 700,
                       }
                     : { fontWeight: 700 }
