@@ -32,7 +32,7 @@ export const SetupForm = ({ onComplete }: SetupFormProps) => {
 
   const handleGridSizeChange = (
     _: React.MouseEvent<HTMLElement>,
-    newValue: number | null
+    newValue: number | null,
   ) => {
     if (newValue !== null) {
       setGridSize(newValue);
@@ -56,16 +56,15 @@ export const SetupForm = ({ onComplete }: SetupFormProps) => {
   const handleGoalChange = (field: keyof Goal, value: Goal[keyof Goal]) => {
     if (!goals) return;
     const updatedGoals = goals.map((goal, index) =>
-      index === currentView ? { ...goal, [field]: value } : goal
+      index === currentView ? { ...goal, [field]: value } : goal,
     );
     setGoals(updatedGoals);
   };
 
   const options = [
     { label: "3x3", value: 8 },
-    { label: "4x4", value: 15 },
     { label: "5x5", value: 24 },
-    { label: "6x6", value: 35 },
+    { label: "7x7", value: 48 },
   ];
 
   const allGoalsFilled = goals?.every((g) => g.title.trim() !== "") ?? false;
