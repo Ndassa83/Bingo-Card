@@ -126,8 +126,9 @@ export const CreateCardDialog = ({
           onClick={handleCreate}
           disabled={!name.trim() || !gridDim}
           sx={{
-            background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+            bgcolor: "#1565C0",
             fontWeight: 700,
+            "&:hover": { bgcolor: "#0D47A1" },
           }}
         >
           Next: Add Goals

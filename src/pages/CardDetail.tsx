@@ -189,7 +189,7 @@ export const CardDetail = () => {
           sx={{
             height: "100%",
             width: `${total > 0 ? (completed / total) * 100 : 0}%`,
-            background: "linear-gradient(90deg, #f093fb, #f5576c)",
+            background: "linear-gradient(90deg, #1565C0, #F9A825)",
             transition: "width 0.4s ease",
           }}
         />
@@ -238,7 +238,7 @@ export const CardDetail = () => {
             variant="contained"
             onClick={handlePdfReport}
             sx={{
-              background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+              bgcolor: "#1565C0", "&:hover": { bgcolor: "#0D47A1" },
             }}
           >
             Full Progress Report

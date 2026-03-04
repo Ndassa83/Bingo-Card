@@ -67,9 +67,7 @@ export const Dashboard = () => {
           variant="h5"
           fontWeight={900}
           sx={{
-            background: "linear-gradient(135deg, #f093fb, #f5576c)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
+            color: "#1565C0",
           }}
         >
           Resolution Bingo
@@ -113,11 +111,9 @@ export const Dashboard = () => {
             sx={{
               borderRadius: 3,
               fontWeight: 700,
-              background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-              boxShadow: "0 4px 14px rgba(240,147,251,0.35)",
-              "&:hover": {
-                background: "linear-gradient(135deg, #e07aef 0%, #e04455 100%)",
-              },
+              bgcolor: "#1565C0",
+              boxShadow: "0 4px 14px rgba(21,101,192,0.3)",
+              "&:hover": { bgcolor: "#0D47A1" },
             }}
           >
             New Card
@@ -152,7 +148,7 @@ export const Dashboard = () => {
               sx={{
                 borderRadius: 3,
                 fontWeight: 700,
-                background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+                bgcolor: "#1565C0", "&:hover": { bgcolor: "#0D47A1" },
               }}
             >
               Create My First Card

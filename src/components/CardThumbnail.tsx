@@ -124,7 +124,7 @@ export const CardThumbnail = ({ card, onClick, onDelete, variant = "grid" }: Car
                 sx={{
                   height: "100%",
                   width: `${pct}%`,
-                  background: "linear-gradient(90deg, #f093fb, #f5576c)",
+                  background: "linear-gradient(90deg, #1565C0, #F9A825)",
                   borderRadius: 2,
                   transition: "width 0.4s ease",
                 }}
@@ -241,7 +241,7 @@ export const CardThumbnail = ({ card, onClick, onDelete, variant = "grid" }: Car
               sx={{
                 height: "100%",
                 width: `${pct}%`,
-                background: "linear-gradient(90deg, #f093fb, #f5576c)",
+                background: "linear-gradient(90deg, #1565C0, #F9A825)",
                 borderRadius: 2,
                 transition: "width 0.4s ease",
               }}

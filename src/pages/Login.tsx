@@ -1,8 +1,20 @@
 import { useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Typography, Paper } from "@mui/material";
+import { Box, Button, Typography } from "@mui/material";
 import { AuthContext } from "../auth/AuthContext";
 import { signInWithGoogle } from "../firebase/auth";
+
+const MOCK_CELLS = [
+  { label: "Run a 5K", done: true },
+  { label: "Read 12 Books", done: false },
+  { label: "Meditate Daily", done: true },
+  { label: "Save $1,000", done: true },
+  { label: "FREE", done: false, free: true },
+  { label: "Learn Guitar", done: false },
+  { label: "Cook at Home", done: true },
+  { label: "Travel Solo", done: false },
+  { label: "Sleep 8 hrs", done: true },
+];
 
 export const Login = () => {
   const { user } = useContext(AuthContext);
@@ -21,54 +33,50 @@ export const Login = () => {
   };
 
   return (
-    <Paper
-      elevation={4}
+    <Box
       sx={{
-        p: { xs: 4, sm: 6 },
-        borderRadius: 4,
-        maxWidth: 420,
-        width: "100%",
-        textAlign: "center",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        justifySelf: "center",
-        margin: 10,
+        px: 3,
+        py: 0,
+        bgcolor: "#fff",
       }}
     >
       <Typography
         variant="h3"
         fontWeight={900}
-        sx={{
-          background: "linear-gradient(135deg, #43e97b, #2e7d32)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          mb: 1,
-          letterSpacing: -1,
-        }}
+        sx={{ color: "#1565C0", letterSpacing: -1, mb: 1, textAlign: "center" }}
       >
         Resolution Bingo
       </Typography>
-
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+      <Typography
+        variant="body1"
+        color="text.secondary"
+        sx={{ mb: 4, textAlign: "center", maxWidth: 320 }}
+      >
         Turn your goals into a game. Track progress, celebrate wins, get BINGO.
       </Typography>
 
       <Button
         variant="contained"
         size="large"
-        fullWidth
         onClick={handleSignIn}
         sx={{
+          px: 4,
           py: 1.5,
           borderRadius: 3,
           fontSize: "1rem",
           fontWeight: 700,
-          background: "linear-gradient(135deg, #43e97b 0%, #2e7d32 100%)",
-          boxShadow: "0 4px 20px rgba(46,125,50,0.3)",
+          bgcolor: "#1565C0",
+          boxShadow: "0 4px 20px rgba(21,101,192,0.3)",
           "&:hover": {
-            background: "linear-gradient(135deg, #38d46a 0%, #1b5e20 100%)",
-            boxShadow: "0 6px 24px rgba(46,125,50,0.4)",
+            bgcolor: "#0D47A1",
+            boxShadow: "0 6px 24px rgba(21,101,192,0.4)",
           },
+          mb: 6,
         }}
         startIcon={
           <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
@@ -81,6 +89,64 @@ export const Login = () => {
       >
         Sign in with Google
       </Button>
-    </Paper>
+
+      {/* Decorative mock bingo grid */}
+      <Box sx={{ width: "100%", maxWidth: 280 }}>
+        <Typography
+          variant="caption"
+          color="text.disabled"
+          sx={{
+            display: "block",
+            textAlign: "center",
+            mb: 1.5,
+            letterSpacing: 1,
+          }}
+        ></Typography>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 0.75,
+          }}
+        >
+          {MOCK_CELLS.map((cell, i) => (
+            <Box
+              key={i}
+              sx={{
+                aspectRatio: "1",
+                borderRadius: 1.5,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                p: 0.75,
+                bgcolor: cell.free ? "#F9A825" : cell.done ? "#1565C0" : "#fff",
+                border: "2px solid",
+                borderColor: cell.free
+                  ? "#F9A825"
+                  : cell.done
+                    ? "#1565C0"
+                    : "#e0e0e0",
+                boxShadow:
+                  cell.done || cell.free
+                    ? "0 2px 8px rgba(0,0,0,0.12)"
+                    : "none",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: "0.55rem",
+                  fontWeight: 700,
+                  color: cell.done || cell.free ? "#fff" : "#bdbdbd",
+                  textAlign: "center",
+                  lineHeight: 1.2,
+                }}
+              >
+                {cell.label}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Box>
+    </Box>
   );
 };

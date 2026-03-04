@@ -87,9 +87,7 @@ export const ShareView = () => {
           variant="h5"
           fontWeight={900}
           sx={{
-            background: "linear-gradient(135deg, #f093fb, #f5576c)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
+            color: "#1565C0",
           }}
         >
           Resolution Bingo
