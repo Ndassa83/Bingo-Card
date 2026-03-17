@@ -1,18 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { getShareTarget } from "../firebase/firestore";
+import { useAuth } from "../hooks/useAuth";
 import { BingoCard } from "../BingoCard";
 import type { CardData } from "../types";
 import { GRADIENTS } from "../types";
 
 export const ShareView = () => {
   const { shareId } = useParams<{ shareId: string }>();
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [card, setCard] = useState<CardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [shareTarget, setShareTarget] = useState<{ userId: string; cardId: string } | null>(null);
 
   useEffect(() => {
     if (!shareId) { setNotFound(true); setLoading(false); return; }
@@ -21,6 +25,8 @@ export const ShareView = () => {
 
     getShareTarget(shareId).then((target) => {
       if (!target) { setNotFound(true); setLoading(false); return; }
+
+      setShareTarget(target);
 
       unsubscribe = onSnapshot(
         doc(db, "users", target.userId, "cards", target.cardId),
@@ -33,6 +39,14 @@ export const ShareView = () => {
 
     return () => unsubscribe?.();
   }, [shareId]);
+
+  // Redirect owner to the editable CardDetail view
+  useEffect(() => {
+    if (!shareTarget || authLoading) return;
+    if (user?.uid === shareTarget.userId) {
+      navigate(`/card/${shareTarget.cardId}`, { replace: true });
+    }
+  }, [shareTarget, user, authLoading, navigate]);
 
   // Build marked array from completed goals — read-only, no interaction
   const marked = useMemo(() => {

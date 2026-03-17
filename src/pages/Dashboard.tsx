@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Avatar,
   Box,
   Button,
   CircularProgress,
+  Divider,
   Grid,
   IconButton,
   Tooltip,
@@ -14,15 +15,17 @@ import AddIcon from "@mui/icons-material/Add";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useAuth } from "../hooks/useAuth";
 import { useCards } from "../hooks/useCards";
+import { useSharedCards } from "../hooks/useSharedCards";
 import { signOut } from "../firebase/auth";
-import { createUserProfile, deleteCard } from "../firebase/firestore";
+import { createUserProfile, deleteCard, removeSelfFromCard } from "../firebase/firestore";
 import { CardThumbnail } from "../components/CardThumbnail";
 import { CreateCardDialog } from "../components/CreateCardDialog";
-import { useEffect } from "react";
+import { Logo } from "../components/Logo";
 
 export const Dashboard = () => {
   const { user } = useAuth();
   const { cards, loading } = useCards(user?.uid ?? null);
+  const { sharedCards, loading: sharedLoading } = useSharedCards(user?.email ?? null);
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -37,7 +40,7 @@ export const Dashboard = () => {
     }
   }, [user]);
 
-  const handleCreate = (name: string, gridDim: 3 | 4 | 5 | 6) => {
+  const handleCreate = (name: string, gridDim: 3 | 5 | 7) => {
     // Navigate to setup wizard with name + gridDim as state
     navigate("/create", { state: { name, gridDim } });
   };
@@ -46,6 +49,12 @@ export const Dashboard = () => {
     if (!user) return;
     if (!confirm("Delete this card? This can't be undone.")) return;
     await deleteCard(user.uid, cardId);
+  };
+
+  const handleRemoveShared = async (ownerUid: string, cardId: string) => {
+    if (!user?.email) return;
+    if (!confirm("Remove this card from your dashboard? You'll lose access.")) return;
+    await removeSelfFromCard(ownerUid, cardId, user.email);
   };
 
   return (
@@ -63,15 +72,7 @@ export const Dashboard = () => {
           bgcolor: "white",
         }}
       >
-        <Typography
-          variant="h5"
-          fontWeight={900}
-          sx={{
-            color: "#1565C0",
-          }}
-        >
-          Resolution Bingo
-        </Typography>
+        <Logo size="md" />
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           <Avatar
             src={user?.photoURL ?? undefined}
@@ -168,6 +169,48 @@ export const Dashboard = () => {
             ))}
           </Grid>
         )}
+
+        {/* Shared with Me — always rendered for authenticated users */}
+        <>
+          <Divider sx={{ my: 4 }} />
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="h5" fontWeight={800}>
+              Shared with Me
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 2 }}>
+              {sharedLoading
+                ? "Loading..."
+                : sharedCards.length === 0
+                  ? "No shared cards yet."
+                  : `${sharedCards.length} card${sharedCards.length !== 1 ? "s" : ""}`}
+            </Typography>
+          </Box>
+          {sharedLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : sharedCards.length > 0 ? (
+            <Grid container spacing={2}>
+              {sharedCards.map((card) => (
+                <Grid key={card.id} size={{ xs: 12 }}>
+                  <CardThumbnail
+                    card={card}
+                    variant="list"
+                    isShared
+                    ownerDisplayName={card.ownerDisplayName}
+                    ownerEmail={card.ownerEmail}
+                    onClick={() =>
+                      navigate(`/card/${card.id}`, {
+                        state: { ownerUid: card.ownerUid },
+                      })
+                    }
+                    onDelete={() => handleRemoveShared(card.ownerUid, card.id)}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          ) : null}
+        </>
       </Box>
 
       <CreateCardDialog

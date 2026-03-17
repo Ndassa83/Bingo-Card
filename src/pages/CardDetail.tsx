@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Box,
   Button,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -15,8 +16,9 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PaletteIcon from "@mui/icons-material/Palette";
 import ShareIcon from "@mui/icons-material/Share";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import PeopleIcon from "@mui/icons-material/People";
 import { useAuth } from "../hooks/useAuth";
-import { useCard } from "../hooks/useCard";
+import { useCardAsCollaborator } from "../hooks/useCardAsCollaborator";
 import {
   updateGoal,
   updateCardMeta,
@@ -26,18 +28,34 @@ import { uploadGoalImage } from "../firebase/storage";
 import { BingoCard } from "../BingoCard";
 import { GoalModal } from "../components/GoalModal";
 import { ColorPicker } from "../components/ColorPicker";
+import { PeopleDialog } from "../components/PeopleDialog";
 import type { Goal } from "../types";
 import { GRADIENTS } from "../types";
 
 export const CardDetail = () => {
   const { cardId } = useParams<{ cardId: string }>();
   const { user } = useAuth();
-  const { card, loading } = useCard(user?.uid ?? null, cardId);
+  const location = useLocation();
   const navigate = useNavigate();
+
+  // ownerUid comes from navigation state when a collaborator navigates to this card
+  const ownerUid: string =
+    (location.state as { ownerUid?: string } | null)?.ownerUid ?? user?.uid ?? "";
+
+  const isOwner = ownerUid === user?.uid;
+
+  const { card, loading } = useCardAsCollaborator(ownerUid, cardId);
 
   const [selectedGoalIdx, setSelectedGoalIdx] = useState<number | null>(null);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+  const [peopleDialogOpen, setPeopleDialogOpen] = useState(false);
+
+  // Derive role for the current user
+  const userEmail = user?.email?.toLowerCase() ?? "";
+  const canEdit =
+    isOwner ||
+    (card?.editorEmails ?? []).map((e) => e.toLowerCase()).includes(userEmail);
 
   // Derive "marked" array from goals.completed state
   const marked = useMemo(() => {
@@ -53,25 +71,20 @@ export const CardDetail = () => {
   }, [card]);
 
   const handleCellClick = (goalIdx: number | null) => {
-    if (goalIdx === null) return; // FREE cell
+    if (!canEdit || goalIdx === null) return;
     setSelectedGoalIdx(goalIdx);
   };
 
   const handleGoalUpdate = async (updates: Partial<Goal>) => {
-    if (!user || !card || selectedGoalIdx === null) return;
-    await updateGoal(user.uid, card.id, card.goals, selectedGoalIdx, updates);
+    if (!card || selectedGoalIdx === null) return;
+    await updateGoal(ownerUid, card.id, card.goals, selectedGoalIdx, updates);
   };
 
   const handleImageUpload = async (file: File) => {
-    if (!user || !card || selectedGoalIdx === null) return;
+    if (!card || selectedGoalIdx === null) return;
     try {
-      const url = await uploadGoalImage(
-        user.uid,
-        card.id,
-        selectedGoalIdx,
-        file,
-      );
-      await updateGoal(user.uid, card.id, card.goals, selectedGoalIdx, {
+      const url = await uploadGoalImage(ownerUid, card.id, selectedGoalIdx, file);
+      await updateGoal(ownerUid, card.id, card.goals, selectedGoalIdx, {
         imageUrl: url,
       });
     } catch (err) {
@@ -86,16 +99,18 @@ export const CardDetail = () => {
     color: string,
     gradientKey: string | null,
   ) => {
-    if (!user || !card) return;
-    await updateCardMeta(user.uid, card.id, {
-      backgroundColor: color,
-      gradientKey,
-    });
+    if (!card) return;
+    await updateCardMeta(ownerUid, card.id, { backgroundColor: color, gradientKey });
+  };
+
+  const handleCellColorChange = async (cellStyleColor: string | null) => {
+    if (!card) return;
+    await updateCardMeta(ownerUid, card.id, { cellStyleColor });
   };
 
   const handleShare = async () => {
     if (!user || !card) return;
-    const id = card.shareId ?? (await enableSharing(user.uid, card.id));
+    const id = card.shareId ?? (await enableSharing(ownerUid, card.id));
     const url = `${window.location.origin}/share/${id}`;
     await navigator.clipboard.writeText(url).catch(() => {});
     alert(`Share link copied!\n\n${url}`);
@@ -166,16 +181,32 @@ export const CardDetail = () => {
         <Typography variant="caption" color="text.secondary">
           {completed}/{total} goals
         </Typography>
-        <Tooltip title="Change background">
-          <IconButton size="small" onClick={() => setColorPickerOpen(true)}>
-            <PaletteIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Share (read-only link)">
-          <IconButton size="small" onClick={handleShare}>
-            <ShareIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        {!canEdit && (
+          <Chip label="View only" size="small" color="default" sx={{ fontSize: "0.7rem" }} />
+        )}
+        {/* Editor + owner controls */}
+        {canEdit && (
+          <Tooltip title="Change background">
+            <IconButton size="small" onClick={() => setColorPickerOpen(true)}>
+              <PaletteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+        {/* Owner-only controls */}
+        {isOwner && (
+          <>
+            <Tooltip title="Share (read-only link)">
+              <IconButton size="small" onClick={handleShare}>
+                <ShareIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Manage collaborators">
+              <IconButton size="small" onClick={() => setPeopleDialogOpen(true)}>
+                <PeopleIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </>
+        )}
         <Tooltip title="Export PDF">
           <IconButton size="small" onClick={() => setPdfDialogOpen(true)}>
             <PictureAsPdfIcon fontSize="small" />
@@ -237,9 +268,7 @@ export const CardDetail = () => {
             fullWidth
             variant="contained"
             onClick={handlePdfReport}
-            sx={{
-              bgcolor: "#1565C0", "&:hover": { bgcolor: "#0D47A1" },
-            }}
+            sx={{ bgcolor: "#1565C0", "&:hover": { bgcolor: "#0D47A1" } }}
           >
             Full Progress Report
           </Button>
@@ -247,22 +276,37 @@ export const CardDetail = () => {
       </Dialog>
 
       {/* Color Picker */}
-      <ColorPicker
-        open={colorPickerOpen}
-        onClose={() => setColorPickerOpen(false)}
-        currentColor={card.backgroundColor}
-        currentGradient={card.gradientKey}
-        onColorChange={handleColorChange}
-      />
+      {canEdit && (
+        <ColorPicker
+          open={colorPickerOpen}
+          onClose={() => setColorPickerOpen(false)}
+          currentColor={card.backgroundColor}
+          currentGradient={card.gradientKey}
+          currentCellColor={card.cellStyleColor ?? null}
+          onColorChange={handleColorChange}
+          onCellColorChange={handleCellColorChange}
+        />
+      )}
 
-      {/* Goal Modal */}
-      {selectedGoalIdx !== null && (
+      {/* Goal Modal — only for editors/owner */}
+      {canEdit && selectedGoalIdx !== null && (
         <GoalModal
           goal={card.goals[selectedGoalIdx]}
           open
           onClose={() => setSelectedGoalIdx(null)}
           onUpdate={handleGoalUpdate}
           onImageUpload={handleImageUpload}
+        />
+      )}
+
+      {/* People Dialog — owner only */}
+      {isOwner && (
+        <PeopleDialog
+          open={peopleDialogOpen}
+          onClose={() => setPeopleDialogOpen(false)}
+          ownerUid={ownerUid}
+          ownerEmail={user?.email ?? ""}
+          card={card}
         />
       )}
     </Box>
