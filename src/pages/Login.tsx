@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Box, Button, Typography } from "@mui/material";
 import { AuthContext } from "../auth/AuthContext";
 import { signInWithGoogle } from "../firebase/auth";
+import { Logo } from "../components/Logo";
 
 const MOCK_CELLS = [
   { label: "Run a 5K", done: true },
@@ -45,19 +46,17 @@ export const Login = () => {
         bgcolor: "#fff",
       }}
     >
-      <Typography
-        variant="h3"
-        fontWeight={900}
-        sx={{ color: "#1565C0", letterSpacing: -1, mb: 1, textAlign: "center" }}
-      >
-        Resolution Bingo
-      </Typography>
+      <Box sx={{ mb: 1.5 }}>
+        <Logo size="lg" />
+      </Box>
       <Typography
         variant="body1"
         color="text.secondary"
-        sx={{ mb: 4, textAlign: "center", maxWidth: 320 }}
+        sx={{ mb: 4, textAlign: "center", maxWidth: 300, lineHeight: 1.6 }}
       >
-        Turn your goals into a game. Track progress, celebrate wins, get BINGO.
+        Pick your goals, check them off one by one, and shout BINGO! 🎉
+        <br />
+        Make this the year you actually follow through.
       </Typography>
 
       <Button

@@ -1,0 +1,19 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "cards",
+      "fieldPath": "editorEmails",
+      "indexes": [
+        { "queryScope": "COLLECTION_GROUP", "arrayConfig": "CONTAINS" }
+      ]
+    },
+    {
+      "collectionGroup": "cards",
+      "fieldPath": "viewerEmails",
+      "indexes": [
+        { "queryScope": "COLLECTION_GROUP", "arrayConfig": "CONTAINS" }
+      ]
+    }
+  ]
+}

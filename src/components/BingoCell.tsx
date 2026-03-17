@@ -1,6 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import type { Goal } from "../types";
+import { getContrastColor } from "../utils/contrast";
 
 type LagStatus = "on-track" | "behind" | "far-behind";
 
@@ -11,6 +12,9 @@ type BingoCellProps = {
   lagStatus?: LagStatus;
   fontSize?: string;
   freeImageUrl?: string | null;
+  freeCellLabel?: string;
+  freeCellColor?: string | null;
+  cellStyleColor?: string | null;
   onClick: () => void;
 };
 
@@ -21,11 +25,15 @@ export const BingoCell = ({
   lagStatus,
   fontSize = "0.75rem",
   freeImageUrl,
+  freeCellLabel,
+  freeCellColor,
+  cellStyleColor,
   onClick,
 }: BingoCellProps) => {
   const isFree = goal === null;
 
   const bgColor = (() => {
+    if (isFree && freeCellColor) return freeCellColor;
     if (goal?.cellColor) return goal.cellColor;
     if (inBingo) return "#d4edda";
     if (marked) return "#e8f4fd";
@@ -35,12 +43,18 @@ export const BingoCell = ({
         100,
         Math.round((goal.curCount / goal.finalCount) * 100),
       );
-      return `linear-gradient(to right, rgba(76,175,80,0.3) ${pct}%, white ${pct}%)`;
+      return `linear-gradient(to right, rgba(76,175,80,0.3) ${pct}%, ${cellStyleColor ?? "white"} ${pct}%)`;
     }
-    return "white";
+    return cellStyleColor ?? "white";
   })();
 
   const borderColor = inBingo ? "#28a745" : marked ? "#2196f3" : "#e0e0e0";
+
+  const textColor = goal?.cellColor
+    ? getContrastColor(goal.cellColor)
+    : cellStyleColor
+    ? getContrastColor(cellStyleColor)
+    : undefined;
 
   const lagDot: Record<Exclude<LagStatus, "on-track">, string> = {
     behind: "#ff9800",
@@ -132,12 +146,18 @@ export const BingoCell = ({
               position: "relative",
               fontSize,
               fontWeight: 800,
-              color: freeImageUrl ? "white" : "text.secondary",
+              color: freeImageUrl ? "white" : freeCellColor ? getContrastColor(freeCellColor) : "text.secondary",
               letterSpacing: 1,
               textShadow: freeImageUrl ? "0 1px 3px rgba(0,0,0,0.5)" : "none",
+              textAlign: "center",
+              lineHeight: 1.2,
+              overflow: "hidden",
+              display: "-webkit-box",
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: "vertical",
             }}
           >
-            FREE
+            {freeCellLabel ?? "FREE"}
           </Typography>
         </>
       ) : (
@@ -169,7 +189,7 @@ export const BingoCell = ({
               display: "-webkit-box",
               WebkitLineClamp: 4,
               WebkitBoxOrient: "vertical",
-              color: marked ? "text.primary" : "text.secondary",
+              color: textColor ?? (marked ? "text.primary" : "text.secondary"),
             }}
           >
             {goal?.title || "(untitled)"}
@@ -181,7 +201,7 @@ export const BingoCell = ({
                 position: "relative",
                 fontSize: "0.6rem",
                 mt: 0.5,
-                color: "text.disabled",
+                color: textColor ? `${textColor}99` : "text.disabled",
                 fontWeight: 600,
               }}
             >

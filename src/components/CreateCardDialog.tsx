@@ -11,19 +11,17 @@ import {
   Typography,
   Box,
 } from "@mui/material";
-import { GRADIENTS } from "../types";
 
 type CreateCardDialogProps = {
   open: boolean;
   onClose: () => void;
-  onCreate: (name: string, gridDim: 3 | 4 | 5 | 6) => void;
+  onCreate: (name: string, gridDim: 3 | 5 | 7) => void;
 };
 
-const GRID_OPTIONS: { label: string; value: 3 | 4 | 5 | 6; goals: number }[] = [
+const GRID_OPTIONS: { label: string; value: 3 | 5 | 7; goals: number }[] = [
   { label: "3×3", value: 3, goals: 8 },
-  { label: "4×4", value: 4, goals: 15 },
   { label: "5×5", value: 5, goals: 24 },
-  { label: "6×6", value: 6, goals: 35 },
+  { label: "7×7", value: 7, goals: 48 },
 ];
 
 export const CreateCardDialog = ({
@@ -32,7 +30,7 @@ export const CreateCardDialog = ({
   onCreate,
 }: CreateCardDialogProps) => {
   const [name, setName] = useState("");
-  const [gridDim, setGridDim] = useState<3 | 4 | 5 | 6 | null>(null);
+  const [gridDim, setGridDim] = useState<3 | 5 | 7 | null>(null);
 
   const handleClose = () => {
     setName("");
@@ -93,31 +91,6 @@ export const CreateCardDialog = ({
           </ToggleButtonGroup>
         </Box>
 
-        <Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            Background style
-          </Typography>
-          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-            {Object.entries(GRADIENTS).map(([key, value]) => (
-              <Box
-                key={key}
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 2,
-                  background: value,
-                  cursor: "pointer",
-                  border: "3px solid transparent",
-                  "&:hover": { border: "3px solid rgba(0,0,0,0.3)" },
-                }}
-                title={key}
-              />
-            ))}
-          </Box>
-          <Typography variant="caption" color="text.secondary">
-            You can customize colors further after creation.
-          </Typography>
-        </Box>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 3 }}>
         <Button onClick={handleClose}>Cancel</Button>

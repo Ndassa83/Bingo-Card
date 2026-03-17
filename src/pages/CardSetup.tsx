@@ -3,9 +3,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
+  Divider,
   IconButton,
   LinearProgress,
-  MobileStepper,
   Slider,
   TextField,
   Typography,
@@ -19,10 +19,12 @@ import { useAuth } from "../hooks/useAuth";
 import { createCard, updateCardMeta, updateGoals } from "../firebase/firestore";
 import { uploadFreeCellImage, uploadGoalImage } from "../firebase/storage";
 import type { Goal } from "../types";
+import { GRADIENTS, CELL_GRADIENTS, CELL_SOLID_COLORS } from "../types";
+import { getContrastColor } from "../utils/contrast";
 
 type LocationState = {
   name: string;
-  gridDim: 3 | 4 | 5 | 6;
+  gridDim: 3 | 5 | 7;
 };
 
 const makeGoals = (count: number): Goal[] =>
@@ -39,7 +41,7 @@ const makeGoals = (count: number): Goal[] =>
     reminderActive: true,
   }));
 
-const GOAL_COUNT: Record<number, number> = { 3: 8, 4: 15, 5: 24, 6: 35 };
+const GOAL_COUNT: Record<number, number> = { 3: 8, 5: 24, 7: 48 };
 
 export const CardSetup = () => {
   const { user } = useAuth();
@@ -47,7 +49,7 @@ export const CardSetup = () => {
   const location = useLocation();
   const state = location.state as LocationState | null;
 
-  const gridDim = state?.gridDim ?? 5;
+  const gridDim: 3 | 5 | 7 = state?.gridDim ?? 5;
   const cardName = state?.name ?? "My Bingo Card";
   const goalCount = GOAL_COUNT[gridDim];
 
@@ -61,10 +63,16 @@ export const CardSetup = () => {
   const [goalFiles, setGoalFiles] = useState<(File | null)[]>(() => Array(goalCount).fill(null));
   const [goalPreviews, setGoalPreviews] = useState<(string | null)[]>(() => Array(goalCount).fill(null));
   const goalFileInputRef = useRef<HTMLInputElement>(null);
+  const [bgGradientKey, setBgGradientKey] = useState<string | null>("sunset");
+  const [bgSolidColor, setBgSolidColor] = useState<string>("#ffffff");
+  const [cellStyleColor, setCellStyleColor] = useState<string | null>(null);
+  const [freeCellText, setFreeCellText] = useState<string>("");
+  const [freeCellColor, setFreeCellColor] = useState<string | null>(null);
 
   const isFreeStep = step === 0;
-  const isLastStep = step === goalCount;
-  const goalIdx = step - 1; // 0-based goal index when on a goal step
+  const isStyleStep = step === 1;
+  const isLastStep = step === goalCount + 1;
+  const goalIdx = step - 2; // 0-based goal index when on a goal step
   const goal = goals[goalIdx];
 
   const update = <K extends keyof Goal>(field: K, value: Goal[K]) => {
@@ -101,9 +109,12 @@ export const CardSetup = () => {
       cardId = await createCard(user.uid, {
         name: cardName,
         gridDim,
-        backgroundColor: "#ffffff",
-        gradientKey: "sunset",
+        backgroundColor: bgGradientKey ? "#ffffff" : bgSolidColor,
+        gradientKey: bgGradientKey,
         freeImageUrl: null,
+        freeCellText: freeCellText.trim() || null,
+        freeCellColor,
+        cellStyleColor,
         goals,
       });
     } catch (err) {
@@ -149,7 +160,7 @@ export const CardSetup = () => {
     navigate(`/card/${cardId}`, { replace: true });
   };
 
-  const canAdvance = isFreeStep || (goal?.title.trim() !== "");
+  const canAdvance = isFreeStep || isStyleStep || (goal?.title.trim() !== "");
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#fafafa" }}>
@@ -184,7 +195,7 @@ export const CardSetup = () => {
       {/* Progress bar — only counts goal steps */}
       <LinearProgress
         variant="determinate"
-        value={isFreeStep ? 0 : (goalIdx / goalCount) * 100}
+        value={step <= 1 ? 0 : (goalIdx / goalCount) * 100}
         sx={{
           height: 4,
           "& .MuiLinearProgress-bar": {
@@ -198,7 +209,8 @@ export const CardSetup = () => {
           maxWidth: 560,
           mx: "auto",
           px: { xs: 2, sm: 4 },
-          py: 5,
+          pt: 5,
+          pb: 12,
           display: "flex",
           flexDirection: "column",
           gap: 3,
@@ -209,14 +221,107 @@ export const CardSetup = () => {
           <>
             <Box>
               <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                FREE CELL
+                CENTER CELL
               </Typography>
               <Typography variant="h5" fontWeight={800} sx={{ mt: 0.5 }}>
-                Add an image to your center FREE cell
+                Customize your center cell
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                Optional — you can skip this step.
+                All fields are optional — you can skip this step.
               </Typography>
+            </Box>
+
+            <TextField
+              label="Center cell text"
+              placeholder={`Defaults to "${cardName}"`}
+              value={freeCellText}
+              onChange={(e) => setFreeCellText(e.target.value)}
+              fullWidth
+              inputProps={{ maxLength: 40 }}
+              helperText="Leave blank to show the card title"
+            />
+
+            <Box>
+              <Typography variant="body2" fontWeight={600} sx={{ mb: 1.5 }}>
+                Cell color
+              </Typography>
+
+              <Divider sx={{ mb: 1 }}>
+                <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ letterSpacing: 0.5 }}>
+                  GRADIENTS
+                </Typography>
+              </Divider>
+              <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", mb: 1.5, justifyContent: "center" }}>
+                {Object.entries(CELL_GRADIENTS).map(([key, value]) => (
+                  <Box
+                    key={key}
+                    onClick={() => setFreeCellColor(freeCellColor === value ? null : value)}
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 1.5,
+                      background: value,
+                      cursor: "pointer",
+                      border: freeCellColor === value ? "3px solid #333" : "3px solid transparent",
+                      transition: "transform 0.15s",
+                      "&:hover": { transform: "scale(1.1)" },
+                    }}
+                    title={key}
+                  />
+                ))}
+              </Box>
+
+              <Divider sx={{ mb: 1 }}>
+                <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ letterSpacing: 0.5 }}>
+                  SOLID
+                </Typography>
+              </Divider>
+              <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", justifyContent: "center", mb: 1.5 }}>
+                {CELL_SOLID_COLORS.map((color) => (
+                  <Box
+                    key={color}
+                    onClick={() => setFreeCellColor(freeCellColor === color ? null : color)}
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 1.5,
+                      bgcolor: color,
+                      cursor: "pointer",
+                      border: freeCellColor === color ? "3px solid #333" : "3px solid #e0e0e0",
+                      transition: "transform 0.15s",
+                      "&:hover": { transform: "scale(1.1)" },
+                    }}
+                  />
+                ))}
+              </Box>
+
+              <Divider sx={{ mb: 1 }}>
+                <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ letterSpacing: 0.5 }}>
+                  CUSTOM
+                </Typography>
+              </Divider>
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                <Box
+                  component="input"
+                  type="color"
+                  value={freeCellColor ?? "#ffffff"}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFreeCellColor(e.target.value)}
+                  sx={{ width: 36, height: 36, border: "none", borderRadius: 1.5, cursor: "pointer", p: 0.25 }}
+                />
+                <Typography variant="caption" color="text.secondary">Pick any color</Typography>
+              </Box>
+
+              {freeCellColor && (
+                <Box sx={{ display: "flex", justifyContent: "center", mt: 1 }}>
+                  <Button
+                    size="small"
+                    onClick={() => setFreeCellColor(null)}
+                    sx={{ color: "text.secondary", fontSize: "0.75rem" }}
+                  >
+                    Clear color
+                  </Button>
+                </Box>
+              )}
             </Box>
 
             <input
@@ -253,11 +358,239 @@ export const CardSetup = () => {
                 variant="outlined"
                 fullWidth
                 onClick={() => freeFileInputRef.current?.click()}
-                sx={{ borderStyle: "dashed", py: 5, color: "text.secondary", fontSize: "1rem" }}
+                sx={{ borderStyle: "dashed", py: 4, color: "text.secondary", fontSize: "1rem" }}
               >
-                + Add a photo
+                + Add a photo (optional)
               </Button>
             )}
+          </>
+        ) : isStyleStep ? (
+          /* ── Style step ── */
+          <>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                CARD STYLE
+              </Typography>
+              <Typography variant="h5" fontWeight={800} sx={{ mt: 0.5 }}>
+                Choose your card's look
+              </Typography>
+            </Box>
+
+            {/* Live preview */}
+            <Box
+              sx={{
+                maxWidth: "100%",
+                borderRadius: 3,
+                background: bgGradientKey ? (GRADIENTS[bgGradientKey] ?? bgSolidColor) : bgSolidColor,
+                p: 1.5,
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: 0.75,
+                boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+              }}
+            >
+              {Array.from({ length: 9 }).map((_, i) => {
+                const isFreeCell = i === 4;
+                const cellBg = cellStyleColor ?? "rgba(255,255,255,0.82)";
+                const freeBg = freeCellColor ?? cellBg;
+                const bg = isFreeCell ? freeBg : cellBg;
+                const textCol = isFreeCell
+                  ? getContrastColor(freeBg)
+                  : cellStyleColor
+                  ? getContrastColor(cellStyleColor)
+                  : "#555";
+                const freeLabel = freeCellText.trim() || cardName;
+                return (
+                  <Box
+                    key={i}
+                    sx={{
+                      aspectRatio: "1",
+                      borderRadius: 1.5,
+                      background: bg,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      p: 0.5,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {isFreeCell && (
+                      <Typography sx={{
+                        fontSize: "0.5rem",
+                        fontWeight: 800,
+                        color: textCol,
+                        letterSpacing: 0.5,
+                        textAlign: "center",
+                        lineHeight: 1.2,
+                        overflow: "hidden",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: "vertical",
+                      }}>
+                        {freeLabel}
+                      </Typography>
+                    )}
+                  </Box>
+                );
+              })}
+            </Box>
+
+            {/* Background */}
+            <Box>
+              <Typography variant="body2" fontWeight={600} sx={{ mb: 1.5 }}>
+                Background
+              </Typography>
+              <Divider sx={{ mb: 1 }}>
+                <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ letterSpacing: 0.5 }}>
+                  GRADIENTS
+                </Typography>
+              </Divider>
+              <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", mb: 1.5, justifyContent: "center" }}>
+                {Object.entries(GRADIENTS).map(([key, value]) => (
+                  <Box
+                    key={key}
+                    onClick={() => { setBgGradientKey(key); }}
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 1.5,
+                      background: value,
+                      cursor: "pointer",
+                      border: bgGradientKey === key ? "3px solid #333" : "3px solid transparent",
+                      transition: "transform 0.15s",
+                      "&:hover": { transform: "scale(1.1)" },
+                    }}
+                    title={key}
+                  />
+                ))}
+              </Box>
+              <Divider sx={{ mb: 1 }}>
+                <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ letterSpacing: 0.5 }}>
+                  SOLID
+                </Typography>
+              </Divider>
+              <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", mb: 1.5, justifyContent: "center" }}>
+                {[
+                  "#ffffff", "#f8f9fa", "#1a1a2e", "#16213e", "#0f3460",
+                  "#374151", "#1e40af", "#15803d", "#9f1239", "#7e22ce",
+                ].map((color) => (
+                  <Box
+                    key={color}
+                    onClick={() => { setBgGradientKey(null); setBgSolidColor(color); }}
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 1.5,
+                      bgcolor: color,
+                      cursor: "pointer",
+                      border:
+                        !bgGradientKey && bgSolidColor === color
+                          ? "3px solid #333"
+                          : "3px solid #e0e0e0",
+                      transition: "transform 0.15s",
+                      "&:hover": { transform: "scale(1.1)" },
+                    }}
+                  />
+                ))}
+              </Box>
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1, mt: 0.5 }}>
+                <Box
+                  component="input"
+                  type="color"
+                  value={bgSolidColor}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setBgGradientKey(null);
+                    setBgSolidColor(e.target.value);
+                  }}
+                  sx={{ width: 36, height: 36, border: "none", borderRadius: 1.5, cursor: "pointer", p: 0.25 }}
+                />
+                <Typography variant="caption" color="text.secondary">Custom color</Typography>
+              </Box>
+            </Box>
+
+            {/* Cell color */}
+            <Box>
+              <Typography variant="body2" fontWeight={600} sx={{ mb: 1.5 }}>
+                Cell style
+              </Typography>
+
+              <Divider sx={{ mb: 1 }}>
+                <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ letterSpacing: 0.5 }}>
+                  GRADIENTS
+                </Typography>
+              </Divider>
+              <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", mb: 1.5, justifyContent: "center" }}>
+                {Object.entries(CELL_GRADIENTS).map(([key, value]) => (
+                  <Box
+                    key={key}
+                    onClick={() => setCellStyleColor(cellStyleColor === value ? null : value)}
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 1.5,
+                      background: value,
+                      cursor: "pointer",
+                      border: cellStyleColor === value ? "3px solid #333" : "3px solid transparent",
+                      transition: "transform 0.15s",
+                      "&:hover": { transform: "scale(1.1)" },
+                    }}
+                    title={key}
+                  />
+                ))}
+              </Box>
+
+              <Divider sx={{ mb: 1 }}>
+                <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ letterSpacing: 0.5 }}>
+                  SOLID
+                </Typography>
+              </Divider>
+              <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", justifyContent: "center", mb: 1.5 }}>
+                {CELL_SOLID_COLORS.map((color) => (
+                  <Box
+                    key={color}
+                    onClick={() => setCellStyleColor(cellStyleColor === color ? null : color)}
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 1.5,
+                      bgcolor: color,
+                      cursor: "pointer",
+                      border: cellStyleColor === color ? "3px solid #333" : "3px solid #e0e0e0",
+                      transition: "transform 0.15s",
+                      "&:hover": { transform: "scale(1.1)" },
+                    }}
+                  />
+                ))}
+              </Box>
+
+              <Divider sx={{ mb: 1 }}>
+                <Typography variant="caption" color="text.disabled" fontWeight={600} sx={{ letterSpacing: 0.5 }}>
+                  CUSTOM
+                </Typography>
+              </Divider>
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                <Box
+                  component="input"
+                  type="color"
+                  value={cellStyleColor ?? "#ffffff"}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCellStyleColor(e.target.value)}
+                  sx={{ width: 36, height: 36, border: "none", borderRadius: 1.5, cursor: "pointer", p: 0.25 }}
+                />
+                <Typography variant="caption" color="text.secondary">Pick any color</Typography>
+              </Box>
+
+              {cellStyleColor && (
+                <Box sx={{ display: "flex", justifyContent: "center", mt: 1 }}>
+                  <Button
+                    size="small"
+                    onClick={() => setCellStyleColor(null)}
+                    sx={{ color: "text.secondary", fontSize: "0.75rem" }}
+                  >
+                    Clear cell color
+                  </Button>
+                </Box>
+              )}
+            </Box>
           </>
         ) : (
           /* ── Goal step ── */
@@ -393,57 +726,69 @@ export const CardSetup = () => {
           </>
         )}
 
-        {/* Navigation */}
-        <MobileStepper
-          variant="dots"
-          steps={goalCount + 1}
-          position="static"
-          activeStep={step}
-          sx={{ bgcolor: "transparent", justifyContent: "center" }}
-          nextButton={
-            isLastStep ? (
-              <Box sx={{ width: 64 }} />
-            ) : (
-              <Button
-                size="small"
-                onClick={() => setStep((p) => p + 1)}
-                disabled={!canAdvance}
-                endIcon={<ArrowForwardIcon />}
-              >
-                Next
-              </Button>
-            )
-          }
-          backButton={
-            <Button
-              size="small"
-              onClick={() => (step === 0 ? navigate("/") : setStep((p) => p - 1))}
-              startIcon={<ArrowBackIcon />}
-            >
-              Back
-            </Button>
-          }
-        />
+      </Box>
+      {/* Sticky bottom nav */}
+      <Box
+        sx={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          bgcolor: "white",
+          borderTop: "1px solid",
+          borderColor: "grey.200",
+          px: { xs: 2, sm: 4 },
+          py: 2,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          zIndex: 10,
+          boxShadow: "0 -2px 12px rgba(0,0,0,0.06)",
+        }}
+      >
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => (step === 0 ? navigate("/") : setStep((p) => p - 1))}
+          sx={{ color: "text.secondary", fontWeight: 600 }}
+        >
+          Back
+        </Button>
 
-        {/* Create button — full-width below dots on last step */}
-        {isLastStep && (
+        <Typography variant="caption" color="text.secondary" fontWeight={600}>
+          {step + 1} / {goalCount + 2}
+        </Typography>
+
+        {isLastStep ? (
           <Button
             variant="contained"
-            fullWidth
             onClick={handleCreate}
             disabled={!allFilled || saving}
             startIcon={<CheckIcon />}
             sx={{
-              py: 1.5,
-              borderRadius: 3,
-              fontWeight: 700,
-              fontSize: "1rem",
               bgcolor: "#1565C0",
-              boxShadow: "0 4px 14px rgba(21,101,192,0.3)",
+              fontWeight: 700,
+              borderRadius: 2,
+              px: 2.5,
               "&:hover": { bgcolor: "#0D47A1" },
             }}
           >
-            {saving ? "Creating…" : "Create My Bingo Card"}
+            {saving ? "Creating…" : "Create Card"}
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            endIcon={<ArrowForwardIcon />}
+            onClick={() => setStep((p) => p + 1)}
+            disabled={!canAdvance}
+            sx={{
+              bgcolor: "#1565C0",
+              fontWeight: 700,
+              borderRadius: 2,
+              px: 2.5,
+              "&:hover": { bgcolor: "#0D47A1" },
+            }}
+          >
+            Next
           </Button>
         )}
       </Box>

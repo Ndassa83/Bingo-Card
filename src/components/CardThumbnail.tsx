@@ -1,6 +1,8 @@
-import { Box, Card, CardActionArea, IconButton, Typography } from "@mui/material";
+import { Box, Card, CardActionArea, Chip, IconButton, Tooltip, Typography } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
+import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
+import PeopleIcon from "@mui/icons-material/People";
 import { GRADIENTS } from "../types";
 import type { CardData } from "../types";
 
@@ -9,9 +11,12 @@ type CardThumbnailProps = {
   onClick: () => void;
   onDelete: () => void;
   variant?: "grid" | "list";
+  isShared?: boolean;
+  ownerDisplayName?: string | null;
+  ownerEmail?: string | null;
 };
 
-export const CardThumbnail = ({ card, onClick, onDelete, variant = "grid" }: CardThumbnailProps) => {
+export const CardThumbnail = ({ card, onClick, onDelete, variant = "grid", isShared = false, ownerDisplayName, ownerEmail }: CardThumbnailProps) => {
   const background = card.gradientKey
     ? GRADIENTS[card.gradientKey] ?? card.backgroundColor
     : card.backgroundColor;
@@ -108,9 +113,25 @@ export const CardThumbnail = ({ card, onClick, onDelete, variant = "grid" }: Car
             <Typography fontWeight={700} noWrap>
               {card.name}
             </Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>
-              {card.gridDim}×{card.gridDim} · {completed}/{total} goals · {pct}%
-            </Typography>
+            {isShared && (ownerDisplayName || ownerEmail) && (
+              <Typography variant="caption" color="text.secondary" noWrap sx={{ fontStyle: "italic" }}>
+                {ownerDisplayName ?? ownerEmail}
+                {ownerDisplayName && ownerEmail ? ` · ${ownerEmail}` : ""}
+              </Typography>
+            )}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, flexWrap: "wrap" }}>
+              <Typography variant="caption" color="text.secondary" noWrap>
+                {card.gridDim}×{card.gridDim} · {completed}/{total} goals · {pct}%
+              </Typography>
+              {isShared && (
+                <Chip
+                  icon={<PeopleIcon sx={{ fontSize: "0.75rem !important" }} />}
+                  label="Shared"
+                  size="small"
+                  sx={{ height: 16, fontSize: "0.6rem", "& .MuiChip-label": { px: 0.75 } }}
+                />
+              )}
+            </Box>
             <Box
               sx={{
                 mt: 0.75,
@@ -145,28 +166,30 @@ export const CardThumbnail = ({ card, onClick, onDelete, variant = "grid" }: Car
           </Box>
         </CardActionArea>
 
-        {/* Delete button */}
-        <IconButton
-          className="delete-btn"
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          sx={{
-            position: "absolute",
-            top: "50%",
-            right: 8,
-            transform: "translateY(-50%)",
-            bgcolor: "rgba(0,0,0,0.3)",
-            color: "white",
-            opacity: 0,
-            transition: "opacity 0.2s",
-            "&:hover": { bgcolor: "rgba(200,0,0,0.7)" },
-          }}
-        >
-          <DeleteIcon fontSize="small" />
-        </IconButton>
+        {/* Delete / Remove button */}
+        <Tooltip title={isShared ? "Remove from my dashboard" : "Delete card"}>
+          <IconButton
+            className="delete-btn"
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            sx={{
+              position: "absolute",
+              top: "50%",
+              right: 8,
+              transform: "translateY(-50%)",
+              bgcolor: "rgba(0,0,0,0.3)",
+              color: "white",
+              opacity: { xs: 1, sm: 0 },
+              transition: "opacity 0.2s",
+              "&:hover": { bgcolor: "rgba(200,0,0,0.7)" },
+            }}
+          >
+            {isShared ? <PersonRemoveIcon fontSize="small" /> : <DeleteIcon fontSize="small" />}
+          </IconButton>
+        </Tooltip>
       </Card>
     );
   }
@@ -264,7 +287,7 @@ export const CardThumbnail = ({ card, onClick, onDelete, variant = "grid" }: Car
           right: 6,
           bgcolor: "rgba(0,0,0,0.4)",
           color: "white",
-          opacity: 0,
+          opacity: { xs: 1, sm: 0 },
           transition: "opacity 0.2s",
           "&:hover": { bgcolor: "rgba(200,0,0,0.7)" },
         }}

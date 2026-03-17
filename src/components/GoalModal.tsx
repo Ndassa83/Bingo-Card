@@ -15,6 +15,8 @@ import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import EditIcon from "@mui/icons-material/Edit";
 import type { Goal } from "../types";
+import { CELL_GRADIENTS, CELL_SOLID_COLORS } from "../types";
+import { getContrastColor } from "../utils/contrast";
 
 type GoalModalProps = {
   goal: Goal;
@@ -36,6 +38,7 @@ export const GoalModal = ({
   const [editDescription, setEditDescription] = useState(goal.description);
   const [editFinalCount, setEditFinalCount] = useState(goal.finalCount);
   const [editDate, setEditDate] = useState(goal.completeDate);
+  const [editCellColor, setEditCellColor] = useState<string | null>(goal.cellColor);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const pct =
@@ -79,6 +82,7 @@ export const GoalModal = ({
     setEditDescription(goal.description);
     setEditFinalCount(goal.finalCount);
     setEditDate(goal.completeDate);
+    setEditCellColor(goal.cellColor);
     setIsEditing(true);
   };
 
@@ -92,6 +96,7 @@ export const GoalModal = ({
       curCount: newCurCount,
       completeDate: editDate,
       completed: newCurCount >= newFinalCount,
+      cellColor: editCellColor,
     });
     setIsEditing(false);
   };
@@ -195,6 +200,86 @@ export const GoalModal = ({
               fullWidth
               InputLabelProps={{ shrink: true }}
             />
+            {/* Cell color picker */}
+            <Box>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Cell color (optional)
+              </Typography>
+              <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", mb: 1 }}>
+                {Object.entries(CELL_GRADIENTS).map(([key, value]) => (
+                  <Box
+                    key={key}
+                    onClick={() => setEditCellColor(editCellColor === value ? null : value)}
+                    sx={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 1.5,
+                      background: value,
+                      cursor: "pointer",
+                      border: editCellColor === value ? "3px solid #333" : "3px solid transparent",
+                      transition: "transform 0.15s",
+                      "&:hover": { transform: "scale(1.12)" },
+                    }}
+                    title={key}
+                  />
+                ))}
+              </Box>
+              <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
+                {CELL_SOLID_COLORS.map((color) => (
+                  <Box
+                    key={color}
+                    onClick={() => setEditCellColor(editCellColor === color ? null : color)}
+                    sx={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 1.5,
+                      bgcolor: color,
+                      cursor: "pointer",
+                      border: editCellColor === color ? "3px solid #333" : "3px solid #e0e0e0",
+                      transition: "transform 0.15s",
+                      "&:hover": { transform: "scale(1.12)" },
+                    }}
+                  />
+                ))}
+              </Box>
+              {editCellColor && (
+                <Box
+                  sx={{
+                    mt: 1.5,
+                    px: 1.5,
+                    py: 0.75,
+                    borderRadius: 2,
+                    background: editCellColor,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    fontWeight={700}
+                    sx={{ color: getContrastColor(editCellColor) }}
+                  >
+                    Preview
+                  </Typography>
+                  <Button
+                    size="small"
+                    onClick={() => setEditCellColor(null)}
+                    sx={{
+                      minWidth: 0,
+                      p: 0,
+                      fontSize: "0.65rem",
+                      color: getContrastColor(editCellColor),
+                      textDecoration: "underline",
+                      "&:hover": { background: "none" },
+                    }}
+                  >
+                    clear
+                  </Button>
+                </Box>
+              )}
+            </Box>
+
             <Box sx={{ display: "flex", gap: 1 }}>
               <Button variant="outlined" fullWidth onClick={() => setIsEditing(false)}>
                 Cancel
