@@ -19,8 +19,13 @@ const uploadToCloudinary = async (file: File): Promise<string> => {
   }
 
   const data = await res.json() as { secure_url: string };
-  // Force square crop via Cloudinary URL transformation
-  return data.secure_url.replace("/upload/", "/upload/c_fill,ar_1:1/");
+  // Validate URL origin before returning
+  const url = data.secure_url.replace("/upload/", "/upload/c_fill,ar_1:1/");
+  const origin = new URL(url).hostname;
+  if (!origin.endsWith("cloudinary.com")) {
+    throw new Error("Unexpected image URL origin — upload rejected.");
+  }
+  return url;
 };
 
 // Signatures unchanged — callers don't need to be updated

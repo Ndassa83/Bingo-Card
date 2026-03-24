@@ -15,6 +15,7 @@ type BingoCellProps = {
   freeCellLabel?: string;
   freeCellColor?: string | null;
   cellStyleColor?: string | null;
+  fontColor?: string | null;
   onClick: () => void;
 };
 
@@ -28,9 +29,13 @@ export const BingoCell = ({
   freeCellLabel,
   freeCellColor,
   cellStyleColor,
+  fontColor,
   onClick,
 }: BingoCellProps) => {
   const isFree = goal === null;
+  const effectiveFontSize = goal?.fontSizeScale
+    ? `${(parseFloat(fontSize) * goal.fontSizeScale).toFixed(3)}rem`
+    : fontSize;
 
   const bgColor = (() => {
     if (isFree && freeCellColor) return freeCellColor;
@@ -50,11 +55,12 @@ export const BingoCell = ({
 
   const borderColor = inBingo ? "#28a745" : marked ? "#2196f3" : "#e0e0e0";
 
-  const textColor = goal?.cellColor
-    ? getContrastColor(goal.cellColor)
-    : cellStyleColor
-    ? getContrastColor(cellStyleColor)
-    : undefined;
+  const textColor = fontColor
+    ?? (goal?.cellColor
+      ? getContrastColor(goal.cellColor)
+      : cellStyleColor
+      ? getContrastColor(cellStyleColor)
+      : undefined);
 
   const lagDot: Record<Exclude<LagStatus, "on-track">, string> = {
     behind: "#ff9800",
@@ -130,6 +136,7 @@ export const BingoCell = ({
             <Box
               component="img"
               src={freeImageUrl}
+              alt="Free cell image"
               sx={{
                 position: "absolute",
                 inset: 0,
@@ -144,9 +151,9 @@ export const BingoCell = ({
           <Typography
             sx={{
               position: "relative",
-              fontSize,
+              fontSize: effectiveFontSize,
               fontWeight: 800,
-              color: freeImageUrl ? "white" : freeCellColor ? getContrastColor(freeCellColor) : "text.secondary",
+              color: fontColor ?? (freeImageUrl ? "white" : freeCellColor ? getContrastColor(freeCellColor) : "text.secondary"),
               letterSpacing: 1,
               textShadow: freeImageUrl ? "0 1px 3px rgba(0,0,0,0.5)" : "none",
               textAlign: "center",
@@ -167,6 +174,7 @@ export const BingoCell = ({
             <Box
               component="img"
               src={goal.imageUrl}
+              alt={`${goal.title || "Goal"} image`}
               sx={{
                 position: "absolute",
                 inset: 0,
@@ -182,7 +190,7 @@ export const BingoCell = ({
           <Typography
             sx={{
               position: "relative",
-              fontSize,
+              fontSize: effectiveFontSize,
               fontWeight: marked ? 900 : 700,
               lineHeight: 1.2,
               overflow: "hidden",

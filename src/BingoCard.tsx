@@ -53,8 +53,8 @@ export const BingoCard = ({ card, marked, onCellClick }: BingoCardProps) => {
   );
   const hasBingo = bingoSet.size > 0;
 
-  const fontSize =
-    gridDim >= 7 ? "0.42rem" : gridDim >= 5 ? "0.5rem" : "0.7rem";
+  const baseSize = gridDim >= 7 ? 0.42 : gridDim >= 5 ? 0.5 : 0.7;
+  const fontSize = `${(baseSize * (card.fontSizeScale ?? 1.0)).toFixed(3)}rem`;
 
   const freeIdx = Math.floor(gridDim / 2) * gridDim + Math.floor(gridDim / 2);
   let goalCounter = 0;
@@ -108,6 +108,7 @@ export const BingoCard = ({ card, marked, onCellClick }: BingoCardProps) => {
               freeCellLabel={cell === null ? (card.freeCellText ?? card.name) : undefined}
               freeCellColor={cell === null ? (card.freeCellColor ?? null) : undefined}
               cellStyleColor={card.cellStyleColor ?? null}
+              fontColor={card.fontColor ?? null}
               onClick={() => onCellClick(goalIdx)}
             />
           );

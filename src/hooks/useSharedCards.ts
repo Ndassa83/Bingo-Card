@@ -11,11 +11,12 @@ import {
 import { db } from "../firebase/config";
 import type { CardData, SharedCardData, UserProfile } from "../types";
 
-const toShared = (d: QueryDocumentSnapshot): SharedCardData => ({
+const toShared = (role: "editor" | "viewer") => (d: QueryDocumentSnapshot): SharedCardData => ({
   id: d.id,
   ownerUid: d.ref.parent.parent?.id ?? "",
   ownerDisplayName: null,
   ownerEmail: null,
+  role,
   ...(d.data() as Omit<CardData, "id">),
 });
 
@@ -80,13 +81,13 @@ export const useSharedCards = (
 
     const unsubEditor = onSnapshot(
       query(collectionGroup(db, "cards"), where("editorEmails", "array-contains", normalized)),
-      (snap) => { editorCards = snap.docs.map(toShared); editorReady = true; merge(); },
+      (snap) => { editorCards = snap.docs.map(toShared("editor")); editorReady = true; merge(); },
       (err) => { console.error("useSharedCards editorEmails:", err); editorReady = true; merge(); },
     );
 
     const unsubViewer = onSnapshot(
       query(collectionGroup(db, "cards"), where("viewerEmails", "array-contains", normalized)),
-      (snap) => { viewerCards = snap.docs.map(toShared); viewerReady = true; merge(); },
+      (snap) => { viewerCards = snap.docs.map(toShared("viewer")); viewerReady = true; merge(); },
       (err) => { console.error("useSharedCards viewerEmails:", err); viewerReady = true; merge(); },
     );
 

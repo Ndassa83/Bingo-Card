@@ -5,6 +5,10 @@ import {
   Box,
   Button,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
   Grid,
   IconButton,
@@ -20,7 +24,11 @@ import { signOut } from "../firebase/auth";
 import { createUserProfile, deleteCard, removeSelfFromCard } from "../firebase/firestore";
 import { CardThumbnail } from "../components/CardThumbnail";
 import { CreateCardDialog } from "../components/CreateCardDialog";
+import { PeopleDialog } from "../components/PeopleDialog";
 import { Logo } from "../components/Logo";
+import type { CardData } from "../types";
+
+const WELCOME_KEY = "bingo_welcome_seen";
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -28,6 +36,26 @@ export const Dashboard = () => {
   const { sharedCards, loading: sharedLoading } = useSharedCards(user?.email ?? null);
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [sharingCard, setSharingCard] = useState<CardData | null>(null);
+  const [welcomeOpen, setWelcomeOpen] = useState(() => !localStorage.getItem(WELCOME_KEY));
+
+  const handleCloseWelcome = () => {
+    localStorage.setItem(WELCOME_KEY, "1");
+    setWelcomeOpen(false);
+  };
+
+  // Split shared cards into collaborations (editor) and viewer-only
+  const collaborations = sharedCards.filter((c) => c.role === "editor");
+  const viewerSharedCards = sharedCards.filter((c) => c.role === "viewer");
+
+  // Collect suggested emails: owners of cards shared with the current user
+  const suggestedEmails = [
+    ...new Set(
+      sharedCards
+        .map((c) => c.ownerEmail)
+        .filter((e): e is string => !!e && e !== (user?.email?.toLowerCase() ?? "")),
+    ),
+  ];
 
   // Ensure user profile doc exists on first load
   useEffect(() => {
@@ -41,7 +69,6 @@ export const Dashboard = () => {
   }, [user]);
 
   const handleCreate = (name: string, gridDim: 3 | 5 | 7) => {
-    // Navigate to setup wizard with name + gridDim as state
     navigate("/create", { state: { name, gridDim } });
   };
 
@@ -87,7 +114,7 @@ export const Dashboard = () => {
             {user?.displayName}
           </Typography>
           <Tooltip title="Sign out">
-            <IconButton size="small" onClick={signOut}>
+            <IconButton size="small" onClick={signOut} aria-label="Sign out">
               <LogoutIcon fontSize="small" />
             </IconButton>
           </Tooltip>
@@ -164,13 +191,56 @@ export const Dashboard = () => {
                   variant="list"
                   onClick={() => navigate(`/card/${card.id}`)}
                   onDelete={() => handleDelete(card.id)}
+                  onShare={() => setSharingCard(card)}
                 />
               </Grid>
             ))}
           </Grid>
         )}
 
-        {/* Shared with Me — always rendered for authenticated users */}
+        {/* Collaborations — cards where the user is an editor */}
+        <>
+          <Divider sx={{ my: 4 }} />
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="h5" fontWeight={800}>
+              Collaborations
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 2 }}>
+              {sharedLoading
+                ? "Loading..."
+                : collaborations.length === 0
+                  ? "No collaboration boards yet."
+                  : `${collaborations.length} board${collaborations.length !== 1 ? "s" : ""}`}
+            </Typography>
+          </Box>
+          {sharedLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : collaborations.length > 0 ? (
+            <Grid container spacing={2}>
+              {collaborations.map((card) => (
+                <Grid key={card.id} size={{ xs: 12 }}>
+                  <CardThumbnail
+                    card={card}
+                    variant="list"
+                    isShared
+                    ownerDisplayName={card.ownerDisplayName}
+                    ownerEmail={card.ownerEmail}
+                    onClick={() =>
+                      navigate(`/card/${card.id}`, {
+                        state: { ownerUid: card.ownerUid },
+                      })
+                    }
+                    onDelete={() => handleRemoveShared(card.ownerUid, card.id)}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          ) : null}
+        </>
+
+        {/* Shared with Me — viewer-only cards */}
         <>
           <Divider sx={{ my: 4 }} />
           <Box sx={{ mb: 2 }}>
@@ -180,18 +250,18 @@ export const Dashboard = () => {
             <Typography color="text.secondary" sx={{ mb: 2 }}>
               {sharedLoading
                 ? "Loading..."
-                : sharedCards.length === 0
+                : viewerSharedCards.length === 0
                   ? "No shared cards yet."
-                  : `${sharedCards.length} card${sharedCards.length !== 1 ? "s" : ""}`}
+                  : `${viewerSharedCards.length} card${viewerSharedCards.length !== 1 ? "s" : ""}`}
             </Typography>
           </Box>
           {sharedLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
               <CircularProgress size={24} />
             </Box>
-          ) : sharedCards.length > 0 ? (
+          ) : viewerSharedCards.length > 0 ? (
             <Grid container spacing={2}>
-              {sharedCards.map((card) => (
+              {viewerSharedCards.map((card) => (
                 <Grid key={card.id} size={{ xs: 12 }}>
                   <CardThumbnail
                     card={card}
@@ -218,6 +288,41 @@ export const Dashboard = () => {
         onClose={() => setDialogOpen(false)}
         onCreate={handleCreate}
       />
+
+      {/* Share with Friends dialog — triggered from thumbnail */}
+      {sharingCard && user && (
+        <PeopleDialog
+          open
+          onClose={() => setSharingCard(null)}
+          ownerUid={user.uid}
+          ownerEmail={user.email ?? ""}
+          card={sharingCard}
+          suggestedEmails={suggestedEmails}
+        />
+      )}
+
+      {/* Welcome dialog — shown once to first-time users */}
+      <Dialog open={welcomeOpen} onClose={handleCloseWelcome} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800, fontSize: "1.4rem", textAlign: "center", pt: 3 }}>
+          Welcome to BingoGoals! 🎯
+        </DialogTitle>
+        <DialogContent sx={{ textAlign: "center", px: 3 }}>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Turn your goals into a bingo card. Complete goals to fill your board — get a full row, column, or diagonal and shout <strong>BINGO!</strong>
+          </Typography>
+          <Box sx={{ textAlign: "left", display: "inline-block" }}>
+            <Typography variant="body2" sx={{ mb: 0.75 }}>✅ Create a card with 8, 24, or 48 goals</Typography>
+            <Typography variant="body2" sx={{ mb: 0.75 }}>📈 Track progress on each goal over time</Typography>
+            <Typography variant="body2" sx={{ mb: 0.75 }}>👥 Invite friends to collaborate or view</Typography>
+            <Typography variant="body2">📄 Export your card as a PDF anytime</Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "center", pb: 3 }}>
+          <Button variant="contained" onClick={handleCloseWelcome} size="large">
+            Let's Go!
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
