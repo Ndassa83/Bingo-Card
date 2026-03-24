@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Box,
@@ -13,8 +13,7 @@ import {
   Typography,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import PaletteIcon from "@mui/icons-material/Palette";
-import ShareIcon from "@mui/icons-material/Share";
+import TuneIcon from "@mui/icons-material/Tune";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import PeopleIcon from "@mui/icons-material/People";
 import { useAuth } from "../hooks/useAuth";
@@ -22,13 +21,15 @@ import { useCardAsCollaborator } from "../hooks/useCardAsCollaborator";
 import {
   updateGoal,
   updateCardMeta,
-  enableSharing,
+  getUserProfile,
 } from "../firebase/firestore";
 import { uploadGoalImage } from "../firebase/storage";
 import { BingoCard } from "../BingoCard";
 import { GoalModal } from "../components/GoalModal";
-import { ColorPicker } from "../components/ColorPicker";
+import { EditBoardDialog } from "../components/EditBoardDialog";
 import { PeopleDialog } from "../components/PeopleDialog";
+import { ProgressBar } from "../components/ProgressBar";
+import { useToast } from "../contexts/ToastContext";
 import type { Goal } from "../types";
 import { GRADIENTS } from "../types";
 
@@ -37,6 +38,7 @@ export const CardDetail = () => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   // ownerUid comes from navigation state when a collaborator navigates to this card
   const ownerUid: string =
@@ -47,9 +49,16 @@ export const CardDetail = () => {
   const { card, loading } = useCardAsCollaborator(ownerUid, cardId);
 
   const [selectedGoalIdx, setSelectedGoalIdx] = useState<number | null>(null);
-  const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const [editBoardOpen, setEditBoardOpen] = useState(false);
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const [peopleDialogOpen, setPeopleDialogOpen] = useState(false);
+
+  // Fetch owner profile when viewing someone else's board
+  const [ownerProfile, setOwnerProfile] = useState<{ displayName: string | null; email: string | null } | null>(null);
+  useEffect(() => {
+    if (isOwner || !ownerUid) return;
+    getUserProfile(ownerUid).then(setOwnerProfile).catch(console.error);
+  }, [isOwner, ownerUid]);
 
   // Derive role for the current user
   const userEmail = user?.email?.toLowerCase() ?? "";
@@ -71,7 +80,7 @@ export const CardDetail = () => {
   }, [card]);
 
   const handleCellClick = (goalIdx: number | null) => {
-    if (!canEdit || goalIdx === null) return;
+    if (goalIdx === null) return;
     setSelectedGoalIdx(goalIdx);
   };
 
@@ -88,17 +97,14 @@ export const CardDetail = () => {
         imageUrl: url,
       });
     } catch (err) {
-      console.error("Image upload failed:", err);
-      alert(
+      showToast(
         `Image upload failed: ${err instanceof Error ? err.message : String(err)}`,
+        "error"
       );
     }
   };
 
-  const handleColorChange = async (
-    color: string,
-    gradientKey: string | null,
-  ) => {
+  const handleColorChange = async (color: string, gradientKey: string | null) => {
     if (!card) return;
     await updateCardMeta(ownerUid, card.id, { backgroundColor: color, gradientKey });
   };
@@ -108,12 +114,24 @@ export const CardDetail = () => {
     await updateCardMeta(ownerUid, card.id, { cellStyleColor });
   };
 
-  const handleShare = async () => {
-    if (!user || !card) return;
-    const id = card.shareId ?? (await enableSharing(ownerUid, card.id));
-    const url = `${window.location.origin}/share/${id}`;
-    await navigator.clipboard.writeText(url).catch(() => {});
-    alert(`Share link copied!\n\n${url}`);
+  const handleNameChange = async (name: string) => {
+    if (!card) return;
+    await updateCardMeta(ownerUid, card.id, { name });
+  };
+
+  const handleFreeCellChange = async (freeCellText: string, freeCellColor: string | null) => {
+    if (!card) return;
+    await updateCardMeta(ownerUid, card.id, { freeCellText: freeCellText || null, freeCellColor });
+  };
+
+  const handleFontColorChange = async (fontColor: string | null) => {
+    if (!card) return;
+    await updateCardMeta(ownerUid, card.id, { fontColor });
+  };
+
+  const handleFontSizeScaleChange = async (fontSizeScale: number | null) => {
+    if (!card) return;
+    await updateCardMeta(ownerUid, card.id, { fontSizeScale });
   };
 
   const handlePdfClean = async () => {
@@ -150,12 +168,16 @@ export const CardDetail = () => {
     return (
       <Box sx={{ p: 4, textAlign: "center" }}>
         <Typography variant="h6">Card not found.</Typography>
+        <Button onClick={() => navigate("/")} sx={{ mt: 2 }}>
+          Back to Dashboard
+        </Button>
       </Box>
     );
   }
 
   const completed = card.goals.filter((g) => g.completed).length;
   const total = card.goals.length;
+  const ownerName = ownerProfile?.displayName ?? ownerProfile?.email ?? null;
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#fafafa" }}>
@@ -172,13 +194,22 @@ export const CardDetail = () => {
           bgcolor: "white",
         }}
       >
-        <IconButton onClick={() => navigate("/")} size="small">
+        <IconButton onClick={() => navigate("/")} size="small" aria-label="Go back to dashboard">
           <ArrowBackIcon />
         </IconButton>
-        <Typography fontWeight={700} sx={{ flex: 1 }} noWrap>
-          {card.name}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography fontWeight={700} noWrap>
+            {card.name}
+          </Typography>
+          {!isOwner && ownerName && (
+            <Chip
+              label={`Shared by ${ownerName}`}
+              size="small"
+              sx={{ fontSize: "0.68rem", height: 20, bgcolor: "#E3F2FD", color: "#1565C0", mt: 0.25 }}
+            />
+          )}
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
           {completed}/{total} goals
         </Typography>
         {!canEdit && (
@@ -186,45 +217,29 @@ export const CardDetail = () => {
         )}
         {/* Editor + owner controls */}
         {canEdit && (
-          <Tooltip title="Change background">
-            <IconButton size="small" onClick={() => setColorPickerOpen(true)}>
-              <PaletteIcon fontSize="small" />
+          <Tooltip title="Edit Board">
+            <IconButton size="small" onClick={() => setEditBoardOpen(true)} aria-label="Edit board">
+              <TuneIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         )}
         {/* Owner-only controls */}
         {isOwner && (
-          <>
-            <Tooltip title="Share (read-only link)">
-              <IconButton size="small" onClick={handleShare}>
-                <ShareIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Manage collaborators">
-              <IconButton size="small" onClick={() => setPeopleDialogOpen(true)}>
-                <PeopleIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </>
+          <Tooltip title="Share with Friends">
+            <IconButton size="small" onClick={() => setPeopleDialogOpen(true)} aria-label="Share with friends">
+              <PeopleIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         )}
         <Tooltip title="Export PDF">
-          <IconButton size="small" onClick={() => setPdfDialogOpen(true)}>
+          <IconButton size="small" onClick={() => setPdfDialogOpen(true)} aria-label="Export PDF">
             <PictureAsPdfIcon fontSize="small" />
           </IconButton>
         </Tooltip>
       </Box>
 
       {/* Progress bar */}
-      <Box sx={{ height: 4, bgcolor: "grey.100" }}>
-        <Box
-          sx={{
-            height: "100%",
-            width: `${total > 0 ? (completed / total) * 100 : 0}%`,
-            background: "linear-gradient(90deg, #1565C0, #F9A825)",
-            transition: "width 0.4s ease",
-          }}
-        />
-      </Box>
+      <ProgressBar value={total > 0 ? (completed / total) * 100 : 0} height={4} />
 
       {/* Card */}
       <Box
@@ -268,34 +283,36 @@ export const CardDetail = () => {
             fullWidth
             variant="contained"
             onClick={handlePdfReport}
-            sx={{ bgcolor: "#1565C0", "&:hover": { bgcolor: "#0D47A1" } }}
           >
             Full Progress Report
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Color Picker */}
+      {/* Edit Board Dialog — editors/owner only */}
       {canEdit && (
-        <ColorPicker
-          open={colorPickerOpen}
-          onClose={() => setColorPickerOpen(false)}
-          currentColor={card.backgroundColor}
-          currentGradient={card.gradientKey}
-          currentCellColor={card.cellStyleColor ?? null}
+        <EditBoardDialog
+          open={editBoardOpen}
+          onClose={() => setEditBoardOpen(false)}
+          card={card}
           onColorChange={handleColorChange}
           onCellColorChange={handleCellColorChange}
+          onFontColorChange={handleFontColorChange}
+          onFontSizeScaleChange={handleFontSizeScaleChange}
+          onNameChange={handleNameChange}
+          onFreeCellChange={handleFreeCellChange}
         />
       )}
 
-      {/* Goal Modal — only for editors/owner */}
-      {canEdit && selectedGoalIdx !== null && (
+      {/* Goal Modal — visible to all; read-only for viewers */}
+      {selectedGoalIdx !== null && (
         <GoalModal
           goal={card.goals[selectedGoalIdx]}
           open
           onClose={() => setSelectedGoalIdx(null)}
           onUpdate={handleGoalUpdate}
           onImageUpload={handleImageUpload}
+          readOnly={!canEdit}
         />
       )}
 

@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -20,7 +19,10 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { inviteCollaborator, revokeCollaborator } from "../firebase/firestore";
+import { useToast } from "../contexts/ToastContext";
 import type { CardData, CollaboratorRole } from "../types";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type PeopleDialogProps = {
   open: boolean;
@@ -28,6 +30,7 @@ type PeopleDialogProps = {
   ownerUid: string;
   ownerEmail: string;
   card: CardData;
+  suggestedEmails?: string[];
 };
 
 export const PeopleDialog = ({
@@ -36,35 +39,75 @@ export const PeopleDialog = ({
   ownerUid,
   ownerEmail,
   card,
+  suggestedEmails = [],
 }: PeopleDialogProps) => {
+  const { showToast } = useToast();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<CollaboratorRole>("editor");
-  const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
-  const editorEmails: string[] = card.editorEmails ?? [];
-  const viewerEmails: string[] = card.viewerEmails ?? [];
+  const [editorEmails, setEditorEmails] = useState<string[]>(card.editorEmails ?? []);
+  const [viewerEmails, setViewerEmails] = useState<string[]>(card.viewerEmails ?? []);
+
+  // Sync from real-time card prop updates
+  useEffect(() => {
+    setEditorEmails(card.editorEmails ?? []);
+    setViewerEmails(card.viewerEmails ?? []);
+  }, [card.editorEmails, card.viewerEmails]);
+
+  const isValidEmail = EMAIL_REGEX.test(email.trim());
+
+  // Filter suggestions: exclude owner, already-invited people, and filter by current input
+  const filteredSuggestions = suggestedEmails.filter(
+    (e) =>
+      e !== ownerEmail.toLowerCase() &&
+      !editorEmails.includes(e) &&
+      !viewerEmails.includes(e) &&
+      (email.trim() === "" || e.includes(email.trim().toLowerCase())),
+  );
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    setEmailError(null);
+  };
 
   const handleInvite = async () => {
-    const trimmed = email.trim();
+    const trimmed = email.trim().toLowerCase();
     if (!trimmed) return;
-    setError(null);
+
+    if (!EMAIL_REGEX.test(trimmed)) {
+      setEmailError("Please enter a valid email address.");
+      return;
+    }
+
+    setEmailError(null);
     setSending(true);
     try {
       await inviteCollaborator(ownerUid, ownerEmail, card.id, trimmed, role);
       setEmail("");
+      showToast("Invitation sent!", "success");
+      // Optimistic update
+      if (role === "editor") setEditorEmails((prev) => [...prev, trimmed]);
+      else setViewerEmails((prev) => [...prev, trimmed]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to invite.");
+      showToast(err instanceof Error ? err.message : "Failed to invite.", "error");
     } finally {
       setSending(false);
     }
   };
 
   const handleRevoke = async (revokeEmail: string, revokeRole: CollaboratorRole) => {
+    // Optimistic update
+    if (revokeRole === "editor") setEditorEmails((prev) => prev.filter((e) => e !== revokeEmail));
+    else setViewerEmails((prev) => prev.filter((e) => e !== revokeEmail));
     try {
       await revokeCollaborator(ownerUid, card.id, revokeEmail, revokeRole);
     } catch {
-      // Silent — real-time listener will reflect actual state
+      // Revert on failure — real-time listener will also correct state
+      if (revokeRole === "editor") setEditorEmails((prev) => [...prev, revokeEmail]);
+      else setViewerEmails((prev) => [...prev, revokeEmail]);
+      showToast("Failed to remove collaborator.", "error");
     }
   };
 
@@ -82,7 +125,7 @@ export const PeopleDialog = ({
         }}
       >
         Share "{card.name}"
-        <IconButton size="small" onClick={onClose}>
+        <IconButton size="small" onClick={onClose} aria-label="Close dialog">
           <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>
@@ -97,13 +140,13 @@ export const PeopleDialog = ({
             size="small"
             placeholder="email@example.com"
             value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setError(null);
-            }}
+            onChange={(e) => handleEmailChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") handleInvite();
             }}
+            error={!!emailError}
+            helperText={emailError ?? "Enter a valid email address"}
+            autoFocus
             sx={{ flex: 1, minWidth: 200 }}
           />
           <ToggleButtonGroup
@@ -124,16 +167,26 @@ export const PeopleDialog = ({
           <Button
             variant="contained"
             onClick={handleInvite}
-            disabled={!email.trim() || sending}
-            sx={{ bgcolor: "#1565C0", "&:hover": { bgcolor: "#0D47A1" }, fontWeight: 700 }}
+            disabled={!email.trim() || !isValidEmail || sending}
           >
             Add
           </Button>
         </Box>
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
+        {filteredSuggestions.length > 0 && (
+          <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", mb: 1 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ width: "100%", mb: 0.25 }}>
+              Suggested
+            </Typography>
+            {filteredSuggestions.map((s) => (
+              <Chip
+                key={s}
+                label={s}
+                size="small"
+                onClick={() => setEmail(s)}
+                sx={{ cursor: "pointer", fontSize: "0.72rem" }}
+              />
+            ))}
+          </Box>
         )}
 
         {/* Current collaborators */}
@@ -178,7 +231,7 @@ const CollaboratorRow = ({ email, role, onRevoke }: CollaboratorRowProps) => (
   <ListItem
     disablePadding
     secondaryAction={
-      <IconButton edge="end" size="small" onClick={onRevoke} aria-label="remove">
+      <IconButton edge="end" size="small" onClick={onRevoke} aria-label={`Remove ${email}`}>
         <DeleteOutlineIcon fontSize="small" />
       </IconButton>
     }

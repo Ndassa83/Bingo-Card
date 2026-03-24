@@ -11,6 +11,7 @@ export type Goal = {
   cellColor: string | null;
   imageUrl: string | null;
   reminderActive: boolean;
+  fontSizeScale: number | null; // per-cell multiplier (0.5–2.0), null = inherit board scale
 };
 
 export type CollaboratorRole = "viewer" | "editor";
@@ -25,6 +26,8 @@ export type CardData = {
   freeCellText: string | null;
   freeCellColor: string | null;
   cellStyleColor: string | null;
+  fontColor: string | null;
+  fontSizeScale: number | null; // board-level multiplier (0.5–2.0), null = 1.0
   shareId: string | null;
   editorEmails: string[];  // lowercase emails with edit access
   viewerEmails: string[];  // lowercase emails with view-only access
@@ -38,6 +41,7 @@ export type SharedCardData = CardData & {
   ownerUid: string;
   ownerDisplayName: string | null;
   ownerEmail: string | null;
+  role: CollaboratorRole;
 };
 
 export type UserProfile = {

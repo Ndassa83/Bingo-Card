@@ -10,13 +10,14 @@ type CardThumbnailProps = {
   card: CardData;
   onClick: () => void;
   onDelete: () => void;
+  onShare?: () => void;
   variant?: "grid" | "list";
   isShared?: boolean;
   ownerDisplayName?: string | null;
   ownerEmail?: string | null;
 };
 
-export const CardThumbnail = ({ card, onClick, onDelete, variant = "grid", isShared = false, ownerDisplayName, ownerEmail }: CardThumbnailProps) => {
+export const CardThumbnail = ({ card, onClick, onDelete, onShare, variant = "grid", isShared = false, ownerDisplayName, ownerEmail }: CardThumbnailProps) => {
   const background = card.gradientKey
     ? GRADIENTS[card.gradientKey] ?? card.backgroundColor
     : card.backgroundColor;
@@ -88,6 +89,7 @@ export const CardThumbnail = ({ card, onClick, onDelete, variant = "grid", isSha
           overflow: "hidden",
           position: "relative",
           "&:hover .delete-btn": { opacity: 1 },
+          "&:hover .share-btn": { opacity: 1 },
         }}
         elevation={2}
       >
@@ -165,6 +167,33 @@ export const CardThumbnail = ({ card, onClick, onDelete, variant = "grid", isSha
             <ArrowForwardIosIcon sx={{ fontSize: "0.85rem" }} />
           </Box>
         </CardActionArea>
+
+        {/* Share with Friends button — owner cards only */}
+        {!isShared && onShare && (
+          <Tooltip title="Share with Friends">
+            <IconButton
+              className="share-btn"
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onShare();
+              }}
+              sx={{
+                position: "absolute",
+                top: "50%",
+                right: 40,
+                transform: "translateY(-50%)",
+                bgcolor: "rgba(21,101,192,0.75)",
+                color: "white",
+                opacity: { xs: 1, sm: 0 },
+                transition: "opacity 0.2s",
+                "&:hover": { bgcolor: "#1565C0" },
+              }}
+            >
+              <PeopleIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
 
         {/* Delete / Remove button */}
         <Tooltip title={isShared ? "Remove from my dashboard" : "Delete card"}>

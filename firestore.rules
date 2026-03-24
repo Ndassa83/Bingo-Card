@@ -26,28 +26,38 @@ service cloud.firestore {
           && request.auth.token.email != null
           && resource.data.viewerEmails.hasAny([request.auth.token.email]);
       }
+      function validCardData() {
+        return request.resource.data.gridDim in [3, 5, 7]
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 100;
+      }
 
-      // Read: owner, anyone with a public share link, or email-invited users
-      allow read: if isOwner()
-                  || resource.data.shareId != null
-                  || isEditor()
-                  || isViewer();
+      // Read: owner or email-invited collaborators only.
+      // Public share links are resolved via the shares/{shareId} collection — no bypass needed here.
+      allow read: if isOwner() || isEditor() || isViewer();
 
-      // Owner has full write access (create, update, delete)
-      allow write: if isOwner();
+      // Owner: full CRUD with validation on create
+      allow create: if isOwner() && validCardData();
+      allow update, delete: if isOwner();
 
-      // Editors can update everything except delete
-      allow update: if isEditor();
+      // Editors can update card content but NOT the collaboration lists or shareId.
+      allow update: if isEditor()
+        && !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['editorEmails', 'viewerEmails', 'shareId', 'userId']);
 
-      // Any invitee can remove only their own email (self-revoke access)
+      // Any invitee can remove ONLY THEIR OWN email from the card (self-revoke).
+      // The removeAll check ensures only the current user's email can be removed — not others'.
       allow update: if request.auth != null
         && request.auth.token.email != null
         && (resource.data.editorEmails.hasAny([request.auth.token.email])
             || resource.data.viewerEmails.hasAny([request.auth.token.email]))
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['editorEmails', 'viewerEmails', 'updatedAt'])
-        && resource.data.editorEmails.hasAll(request.resource.data.editorEmails)
-        && resource.data.viewerEmails.hasAll(request.resource.data.viewerEmails);
+        && resource.data.editorEmails.removeAll([request.auth.token.email])
+             == request.resource.data.editorEmails
+        && resource.data.viewerEmails.removeAll([request.auth.token.email])
+             == request.resource.data.viewerEmails;
     }
 
     // ── Collection group read rule ───────────────────────────────────────────
@@ -69,6 +79,15 @@ service cloud.firestore {
 
       allow delete: if request.auth != null
                     && resource.data.userId == request.auth.uid;
+    }
+
+    // ── Audit Logs ───────────────────────────────────────────────────────────
+    // Users can only write their own audit logs; read their own.
+    match /auditLogs/{logId} {
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
     }
 
   }

@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./config";
 import type { Goal, CardData, CollaboratorRole } from "../types";
+import { logAudit } from "./auditLogger";
 
 // ─── User Profile ────────────────────────────────────────────────────────────
 
@@ -26,6 +27,15 @@ export const createUserProfile = async (
   }
 };
 
+export const getUserProfile = async (
+  uid: string
+): Promise<{ displayName: string | null; email: string | null } | null> => {
+  const snap = await getDoc(doc(db, "users", uid));
+  if (!snap.exists()) return null;
+  const data = snap.data() as { displayName?: string | null; email?: string | null };
+  return { displayName: data.displayName ?? null, email: data.email ?? null };
+};
+
 // ─── Cards ────────────────────────────────────────────────────────────────────
 
 type NewCardInput = {
@@ -37,6 +47,8 @@ type NewCardInput = {
   freeCellText: string | null;
   freeCellColor: string | null;
   cellStyleColor: string | null;
+  fontColor: string | null;
+  fontSizeScale: number | null;
   goals: Goal[];
 };
 
@@ -52,13 +64,14 @@ export const createCard = async (
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+  logAudit(userId, "card_created", { cardId: ref.id, name: data.name });
   return ref.id;
 };
 
 export const updateCardMeta = async (
   userId: string,
   cardId: string,
-  data: Partial<Pick<CardData, "name" | "backgroundColor" | "gradientKey" | "freeImageUrl" | "freeCellText" | "freeCellColor" | "cellStyleColor">>
+  data: Partial<Pick<CardData, "name" | "backgroundColor" | "gradientKey" | "freeImageUrl" | "freeCellText" | "freeCellColor" | "cellStyleColor" | "fontColor" | "fontSizeScale">>
 ) => {
   await updateDoc(doc(db, "users", userId, "cards", cardId), {
     ...data,
@@ -92,6 +105,7 @@ export const updateGoal = async (
 
 export const deleteCard = async (userId: string, cardId: string) => {
   await deleteDoc(doc(db, "users", userId, "cards", cardId));
+  logAudit(userId, "card_deleted", { cardId });
 };
 
 // ─── Sharing ──────────────────────────────────────────────────────────────────
@@ -142,8 +156,9 @@ export const inviteCollaborator = async (
   const editorEmails: string[] = data.editorEmails ?? [];
   const viewerEmails: string[] = data.viewerEmails ?? [];
 
+  // Return generic success rather than revealing whether the email already exists
   if (editorEmails.includes(normalized) || viewerEmails.includes(normalized)) {
-    throw new Error("This person already has access.");
+    return;
   }
 
   const field = role === "editor" ? "editorEmails" : "viewerEmails";
@@ -151,6 +166,7 @@ export const inviteCollaborator = async (
     [field]: arrayUnion(normalized),
     updatedAt: serverTimestamp(),
   });
+  logAudit(ownerUid, "collaborator_invited", { cardId, inviteeEmail: normalized, role });
 };
 
 export const revokeCollaborator = async (
@@ -165,6 +181,7 @@ export const revokeCollaborator = async (
     [field]: arrayRemove(normalized),
     updatedAt: serverTimestamp(),
   });
+  logAudit(ownerUid, "collaborator_revoked", { cardId, revokedEmail: normalized, role });
 };
 
 export const removeSelfFromCard = async (
