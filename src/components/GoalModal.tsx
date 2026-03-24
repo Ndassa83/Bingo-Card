@@ -148,23 +148,32 @@ export const GoalModal = ({
     const newCompleted = newCount >= goal.finalCount;
     setLocalCount(newCount);
     setLocalCompleted(newCompleted);
-    onUpdate({ curCount: newCount, completed: newCompleted });
+    onUpdate({
+      curCount: newCount,
+      completed: newCompleted,
+      completedAt: newCompleted && !goal.completed ? new Date().toISOString() : goal.completedAt,
+    });
   };
 
   const handleDecrement = () => {
     const newCount = Math.max(0, localCount - 1);
     setLocalCount(newCount);
     setLocalCompleted(false);
-    onUpdate({ curCount: newCount, completed: false });
+    onUpdate({ curCount: newCount, completed: false, completedAt: null });
   };
 
   const handleCountInput = (raw: string) => {
     const n = parseInt(raw, 10);
     if (isNaN(n)) return;
     const clamped = Math.max(0, Math.min(n, goal.finalCount));
+    const newCompleted = clamped >= goal.finalCount;
     setLocalCount(clamped);
-    setLocalCompleted(clamped >= goal.finalCount);
-    onUpdate({ curCount: clamped, completed: clamped >= goal.finalCount });
+    setLocalCompleted(newCompleted);
+    onUpdate({
+      curCount: clamped,
+      completed: newCompleted,
+      completedAt: newCompleted && !goal.completed ? new Date().toISOString() : (newCompleted ? goal.completedAt : null),
+    });
   };
 
   const handleToggleComplete = () => {
@@ -172,7 +181,11 @@ export const GoalModal = ({
       const newCompleted = !localCompleted;
       setLocalCompleted(newCompleted);
       setLocalCount(newCompleted ? 1 : 0);
-      onUpdate({ completed: newCompleted, curCount: newCompleted ? 1 : 0 });
+      onUpdate({
+        completed: newCompleted,
+        curCount: newCompleted ? 1 : 0,
+        completedAt: newCompleted ? new Date().toISOString() : null,
+      });
     }
   };
 
@@ -195,13 +208,17 @@ export const GoalModal = ({
   const handleEditSave = () => {
     const newFinalCount = Math.max(1, editFinalCount);
     const newCurCount = Math.min(goal.curCount, newFinalCount);
+    const newCompleted = newCurCount >= newFinalCount;
     onUpdate({
       title: editTitle.trim() || goal.title,
       description: editDescription,
       finalCount: newFinalCount,
       curCount: newCurCount,
       completeDate: toDMY(editDate) || goal.completeDate,
-      completed: newCurCount >= newFinalCount,
+      completed: newCompleted,
+      completedAt: newCompleted && !goal.completed
+        ? new Date().toISOString()
+        : (!newCompleted ? null : goal.completedAt),
       cellColor: editCellColor,
       fontSizeScale: editFontSizeScale === 1.0 ? null : editFontSizeScale,
     });

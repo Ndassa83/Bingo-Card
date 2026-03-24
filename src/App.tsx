@@ -12,8 +12,8 @@ import { ToastProvider } from "./contexts/ToastContext";
 const theme = createTheme({
   palette: {
     primary: {
-      main: "#1565C0",
-      dark: "#0D47A1",
+      main: "#FF6B6B",
+      dark: "#E05555",
     },
   },
   components: {
@@ -23,7 +23,7 @@ const theme = createTheme({
           fontWeight: 700,
           borderRadius: 8,
           "&:hover": {
-            backgroundColor: "#0D47A1",
+            backgroundColor: "#E05555",
           },
         },
       },

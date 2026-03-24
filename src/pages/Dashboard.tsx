@@ -21,11 +21,18 @@ import { useAuth } from "../hooks/useAuth";
 import { useCards } from "../hooks/useCards";
 import { useSharedCards } from "../hooks/useSharedCards";
 import { signOut } from "../firebase/auth";
-import { createUserProfile, deleteCard, removeSelfFromCard } from "../firebase/firestore";
+import {
+  createUserProfile,
+  deleteCard,
+  removeSelfFromCard,
+} from "../firebase/firestore";
 import { CardThumbnail } from "../components/CardThumbnail";
 import { CreateCardDialog } from "../components/CreateCardDialog";
 import { PeopleDialog } from "../components/PeopleDialog";
 import { Logo } from "../components/Logo";
+import { FireworksCanvas } from "../components/FireworksCanvas";
+import { NotificationBanner } from "../components/NotificationBanner";
+import { useNotifications } from "../hooks/useNotifications";
 import type { CardData } from "../types";
 
 const WELCOME_KEY = "bingo_welcome_seen";
@@ -33,16 +40,26 @@ const WELCOME_KEY = "bingo_welcome_seen";
 export const Dashboard = () => {
   const { user } = useAuth();
   const { cards, loading } = useCards(user?.uid ?? null);
-  const { sharedCards, loading: sharedLoading } = useSharedCards(user?.email ?? null);
+  const { sharedCards, loading: sharedLoading } = useSharedCards(
+    user?.email ?? null,
+  );
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sharingCard, setSharingCard] = useState<CardData | null>(null);
-  const [welcomeOpen, setWelcomeOpen] = useState(() => !localStorage.getItem(WELCOME_KEY));
+  const [welcomeOpen, setWelcomeOpen] = useState(
+    () => !localStorage.getItem(WELCOME_KEY),
+  );
+  const [fireworks, setFireworks] = useState(false);
 
   const handleCloseWelcome = () => {
     localStorage.setItem(WELCOME_KEY, "1");
     setWelcomeOpen(false);
   };
+
+  const { notifications, dismiss: dismissNotifications } = useNotifications(
+    sharedCards,
+    sharedLoading,
+  );
 
   // Split shared cards into collaborations (editor) and viewer-only
   const collaborations = sharedCards.filter((c) => c.role === "editor");
@@ -53,7 +70,9 @@ export const Dashboard = () => {
     ...new Set(
       sharedCards
         .map((c) => c.ownerEmail)
-        .filter((e): e is string => !!e && e !== (user?.email?.toLowerCase() ?? "")),
+        .filter(
+          (e): e is string => !!e && e !== (user?.email?.toLowerCase() ?? ""),
+        ),
     ),
   ];
 
@@ -80,12 +99,31 @@ export const Dashboard = () => {
 
   const handleRemoveShared = async (ownerUid: string, cardId: string) => {
     if (!user?.email) return;
-    if (!confirm("Remove this card from your dashboard? You'll lose access.")) return;
+    if (!confirm("Remove this card from your dashboard? You'll lose access."))
+      return;
     await removeSelfFromCard(ownerUid, cardId, user.email);
   };
 
   return (
-    <Box sx={{ minHeight: "100vh" }}>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        bgcolor: fireworks ? "transparent" : "#FFF8F4",
+        transition: "background-color 0.9s ease",
+        position: "relative",
+      }}
+    >
+      {/* Always mounted so it can fade out smoothly */}
+      <Box
+        sx={{
+          opacity: fireworks ? 1 : 0,
+          transition: "opacity 0.9s ease",
+          pointerEvents: "none",
+        }}
+      >
+        <FireworksCanvas />
+      </Box>
+
       {/* Header */}
       <Box
         sx={{
@@ -94,27 +132,33 @@ export const Dashboard = () => {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          borderBottom: "1px solid",
-          borderColor: "grey.200",
-          bgcolor: "white",
+          background: "linear-gradient(135deg, #FF6B6B 0%, #FF9500 60%, #FECA57 100%)",
+          boxShadow: "0 2px 20px rgba(255,107,107,0.3)",
+          position: "relative",
+          zIndex: 1,
         }}
       >
-        <Logo size="md" />
+        <Box
+          onClick={() => setFireworks((f) => !f)}
+          sx={{ cursor: "pointer" }}
+        >
+          <Logo size="md" onDark />
+        </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           <Avatar
             src={user?.photoURL ?? undefined}
             alt={user?.displayName ?? "User"}
-            sx={{ width: 36, height: 36 }}
+            sx={{ width: 36, height: 36, border: "2px solid rgba(255,255,255,0.6)" }}
           />
           <Typography
             variant="body2"
-            fontWeight={600}
-            sx={{ display: { xs: "none", sm: "block" } }}
+            fontWeight={700}
+            sx={{ display: { xs: "none", sm: "block" }, color: "white" }}
           >
             {user?.displayName}
           </Typography>
           <Tooltip title="Sign out">
-            <IconButton size="small" onClick={signOut} aria-label="Sign out">
+            <IconButton size="small" onClick={signOut} aria-label="Sign out" sx={{ color: "white" }}>
               <LogoutIcon fontSize="small" />
             </IconButton>
           </Tooltip>
@@ -122,12 +166,30 @@ export const Dashboard = () => {
       </Box>
 
       {/* Main content */}
-      <Box sx={{ px: { xs: 2, sm: 4 }, py: 4, maxWidth: 1100, mx: "auto" }}>
+      <Box sx={{ px: { xs: 2, sm: 4 }, py: 4, maxWidth: 1100, mx: "auto", position: "relative", zIndex: 1 }}>
+        <NotificationBanner
+          notifications={notifications}
+          onDismiss={dismissNotifications}
+        />
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" fontWeight={800}>
+          <Typography
+            variant="h4"
+            fontWeight={800}
+            sx={{
+              color: fireworks ? "white" : "text.primary",
+              textShadow: fireworks ? "0 2px 12px rgba(0,0,0,0.8)" : "none",
+              transition: "color 0.6s ease, text-shadow 0.6s ease",
+            }}
+          >
             Your Cards
           </Typography>
-          <Typography color="text.secondary" sx={{ mb: 2 }}>
+          <Typography
+            sx={{
+              mb: 2,
+              color: fireworks ? "rgba(255,255,255,0.7)" : "text.secondary",
+              transition: "color 0.6s ease",
+            }}
+          >
             {cards.length === 0
               ? "No cards yet — create your first one!"
               : `${cards.length} card${cards.length !== 1 ? "s" : ""}`}
@@ -139,9 +201,9 @@ export const Dashboard = () => {
             sx={{
               borderRadius: 3,
               fontWeight: 700,
-              bgcolor: "#1565C0",
-              boxShadow: "0 4px 14px rgba(21,101,192,0.3)",
-              "&:hover": { bgcolor: "#0D47A1" },
+              bgcolor: "#FF6B6B",
+              boxShadow: "0 4px 14px rgba(255,107,107,0.35)",
+              "&:hover": { bgcolor: "#E05555" },
             }}
           >
             New Card
@@ -158,7 +220,7 @@ export const Dashboard = () => {
               textAlign: "center",
               py: 12,
               border: "2px dashed",
-              borderColor: "grey.300",
+              borderColor: "#FFCCC5",
               borderRadius: 4,
             }}
           >
@@ -176,7 +238,8 @@ export const Dashboard = () => {
               sx={{
                 borderRadius: 3,
                 fontWeight: 700,
-                bgcolor: "#1565C0", "&:hover": { bgcolor: "#0D47A1" },
+                bgcolor: "#1565C0",
+                "&:hover": { bgcolor: "#0D47A1" },
               }}
             >
               Create My First Card
@@ -200,12 +263,26 @@ export const Dashboard = () => {
 
         {/* Collaborations — cards where the user is an editor */}
         <>
-          <Divider sx={{ my: 4 }} />
+          <Divider sx={{ my: 4, borderColor: fireworks ? "rgba(255,255,255,0.2)" : "divider", transition: "border-color 0.6s ease" }} />
           <Box sx={{ mb: 2 }}>
-            <Typography variant="h5" fontWeight={800}>
+            <Typography
+              variant="h5"
+              fontWeight={800}
+              sx={{
+                color: fireworks ? "white" : "text.primary",
+                textShadow: fireworks ? "0 2px 12px rgba(0,0,0,0.8)" : "none",
+                transition: "color 0.6s ease, text-shadow 0.6s ease",
+              }}
+            >
               Collaborations
             </Typography>
-            <Typography color="text.secondary" sx={{ mb: 2 }}>
+            <Typography
+              sx={{
+                mb: 2,
+                color: fireworks ? "rgba(255,255,255,0.7)" : "text.secondary",
+                transition: "color 0.6s ease",
+              }}
+            >
               {sharedLoading
                 ? "Loading..."
                 : collaborations.length === 0
@@ -242,12 +319,26 @@ export const Dashboard = () => {
 
         {/* Shared with Me — viewer-only cards */}
         <>
-          <Divider sx={{ my: 4 }} />
+          <Divider sx={{ my: 4, borderColor: fireworks ? "rgba(255,255,255,0.2)" : "divider", transition: "border-color 0.6s ease" }} />
           <Box sx={{ mb: 2 }}>
-            <Typography variant="h5" fontWeight={800}>
+            <Typography
+              variant="h5"
+              fontWeight={800}
+              sx={{
+                color: fireworks ? "white" : "text.primary",
+                textShadow: fireworks ? "0 2px 12px rgba(0,0,0,0.8)" : "none",
+                transition: "color 0.6s ease, text-shadow 0.6s ease",
+              }}
+            >
               Shared with Me
             </Typography>
-            <Typography color="text.secondary" sx={{ mb: 2 }}>
+            <Typography
+              sx={{
+                mb: 2,
+                color: fireworks ? "rgba(255,255,255,0.7)" : "text.secondary",
+                transition: "color 0.6s ease",
+              }}
+            >
               {sharedLoading
                 ? "Loading..."
                 : viewerSharedCards.length === 0
@@ -302,19 +393,41 @@ export const Dashboard = () => {
       )}
 
       {/* Welcome dialog — shown once to first-time users */}
-      <Dialog open={welcomeOpen} onClose={handleCloseWelcome} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontWeight: 800, fontSize: "1.4rem", textAlign: "center", pt: 3 }}>
-          Welcome to BingoGoals! 🎯
+      <Dialog
+        open={welcomeOpen}
+        onClose={handleCloseWelcome}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{
+            fontWeight: 800,
+            fontSize: "1.4rem",
+            textAlign: "center",
+            pt: 3,
+          }}
+        >
+          Welcome to Resolution Bingo!
         </DialogTitle>
         <DialogContent sx={{ textAlign: "center", px: 3 }}>
           <Typography variant="body1" sx={{ mb: 2 }}>
-            Turn your goals into a bingo card. Complete goals to fill your board — get a full row, column, or diagonal and shout <strong>BINGO!</strong>
+            Turn your goals into a bingo card. Complete goals to fill your board
+            — get a full row, column, or diagonal and shout{" "}
+            <strong>BINGO!</strong>
           </Typography>
           <Box sx={{ textAlign: "left", display: "inline-block" }}>
-            <Typography variant="body2" sx={{ mb: 0.75 }}>✅ Create a card with 8, 24, or 48 goals</Typography>
-            <Typography variant="body2" sx={{ mb: 0.75 }}>📈 Track progress on each goal over time</Typography>
-            <Typography variant="body2" sx={{ mb: 0.75 }}>👥 Invite friends to collaborate or view</Typography>
-            <Typography variant="body2">📄 Export your card as a PDF anytime</Typography>
+            <Typography variant="body2" sx={{ mb: 0.75 }}>
+              ✅ Create a card with 8, 24, or 48 goals
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 0.75 }}>
+              📈 Track progress on each goal over time
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 0.75 }}>
+              👥 Invite friends to collaborate or view
+            </Typography>
+            <Typography variant="body2">
+              📄 Export your card as a PDF anytime
+            </Typography>
           </Box>
         </DialogContent>
         <DialogActions sx={{ justifyContent: "center", pb: 3 }}>

@@ -2,6 +2,7 @@ import { Box, Typography } from "@mui/material";
 
 type LogoProps = {
   size?: "sm" | "md" | "lg";
+  onDark?: boolean;
 };
 
 const sizeMap = {
@@ -10,7 +11,7 @@ const sizeMap = {
   lg: { resolution: "2rem", bingo: "2.25rem" },
 };
 
-export const Logo = ({ size = "md" }: LogoProps) => {
+export const Logo = ({ size = "md", onDark = false }: LogoProps) => {
   const s = sizeMap[size];
   return (
     <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.75, userSelect: "none" }}>
@@ -19,7 +20,7 @@ export const Logo = ({ size = "md" }: LogoProps) => {
         sx={{
           fontWeight: 500,
           fontSize: s.resolution,
-          color: "#1565C0",
+          color: onDark ? "rgba(255,255,255,0.9)" : "#FF6B6B",
           letterSpacing: 0.2,
           lineHeight: 1,
         }}
@@ -31,8 +32,8 @@ export const Logo = ({ size = "md" }: LogoProps) => {
         sx={{
           fontWeight: 900,
           fontSize: s.bingo,
-          color: "white",
-          bgcolor: "#F9A825",
+          color: onDark ? "#1A0A2E" : "white",
+          bgcolor: onDark ? "rgba(255,255,255,0.92)" : "#FECA57",
           px: 0.9,
           py: 0.15,
           borderRadius: 1.25,
@@ -40,7 +41,9 @@ export const Logo = ({ size = "md" }: LogoProps) => {
           letterSpacing: 1,
           display: "inline-block",
           textTransform: "uppercase",
-          boxShadow: "0 2px 6px rgba(249,168,37,0.35)",
+          boxShadow: onDark
+            ? "0 2px 8px rgba(0,0,0,0.2)"
+            : "0 2px 6px rgba(254,202,87,0.45)",
         }}
       >
         Bingo

@@ -41,6 +41,7 @@ const makeGoals = (count: number): Goal[] =>
     finalCount: 1,
     completeDate: "12/31/2026",
     completed: false,
+    completedAt: null,
     cellColor: null,
     imageUrl: null,
     reminderActive: true,

@@ -8,6 +8,7 @@ export type Goal = {
   finalCount: number;
   completeDate: string; // "MM/DD/YYYY"
   completed: boolean;
+  completedAt: string | null; // ISO timestamp when goal was actually completed
   cellColor: string | null;
   imageUrl: string | null;
   reminderActive: boolean;
@@ -49,6 +50,13 @@ export type UserProfile = {
   displayName: string | null;
   photoURL: string | null;
   createdAt: Timestamp;
+};
+
+export type GoalNotification = {
+  cardId: string;
+  cardName: string;
+  ownerDisplayName: string | null;
+  newlyCompletedGoals: Array<{ index: number; title: string; completedAt: string | null }>;
 };
 
 export const GRADIENTS: Record<string, string> = {
